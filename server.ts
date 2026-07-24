@@ -403,7 +403,8 @@ const REQUIRED_DISEASES: MasterDisease[] = [
   { id: "dis-35", name: "विदृधि", category: "रोगवार विवरण" },
   { id: "dis-36", name: "अर्श", category: "रोगवार विवरण" },
   { id: "dis-37", name: "अिस्थभंग", category: "रोगवार विवरण" },
-  { id: "dis-38", name: "अन्य रोग", category: "रोगवार विवरण" }
+  { id: "dis-38", name: "अन्य रोग", category: "रोगवार विवरण" },
+  { id: "dis-39", name: "योग", category: "रोगवार विवरण" }
 ];
 
 const app = express();
@@ -3143,6 +3144,7 @@ app.get("/api/mpr/aggregate", (req, res) => {
       { sNo: 36, nameHindi: "अर्श", nameEnglish: "Arsha / Piles" },
       { sNo: 37, nameHindi: "अिस्थभंग", nameEnglish: "Asthibhanga / Fracture" },
       { sNo: 38, nameHindi: "अन्य रोग", nameEnglish: "Anya Rog / Other Diseases" },
+      { sNo: 39, nameHindi: "योग", nameEnglish: "Yoga / Yoga Beneficiaries" },
     ];
 
     standardDiseasesList.forEach(d => {
@@ -3440,6 +3442,7 @@ app.get("/api/mpr/aggregate", (req, res) => {
     { sNo: 36, nameHindi: "अर्श", nameEnglish: "Arsha / Piles" },
     { sNo: 37, nameHindi: "अस्थिभंग", nameEnglish: "Asthibhanga / Fracture" },
     { sNo: 38, nameHindi: "अन्य रोग", nameEnglish: "Anya Rog / Other Diseases" },
+    { sNo: 39, nameHindi: "योग", nameEnglish: "Yoga / Yoga Beneficiaries" },
   ];
 
   const districtDiseaseTotals: Record<number, any> = {};

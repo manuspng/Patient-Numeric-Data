@@ -73,19 +73,19 @@ export default function PremiumReportModal({
   }, [reportType]);
 
   // Generate empty standard diseases list for preview
-  const dummyDiseaseTotals = Array.from({ length: 40 }, (_, i) => ({
+  const dummyDiseaseTotals = Array.from({ length: 39 }, (_, i) => ({
     sNo: i + 1,
     nameHindi: [
       "ज्वर", "अतिसार", "वमन", "श्वासकास", "अम्लिपत्त", "पाण्डु", "कामला", "उदर रोग", "प्रमेह", "मूत्र रोग",
       "आमवात", "संधिवात", "मनो रोग", "नेत्र शोथ", "पक्षाघात", "गृध्रसी", "वातरक्त", "वात व्याधि", "त्वक विकार", "ऊँच्चरक्त चाप",
       "हृदय रोग", "रक्त पित्त", "शिरोरोग", "मुखरोग", "कर्ण रोग", "प्रदर रोग", "रजोरोग", "रक्तअल्पता", "बालातिसार", "बालशोथ",
-      "बालज्वर", "श्वेत प्रदर", "सुजाक", "आतशक", "भगन्दर", "अर्श", "कृमि रोग", "अन्य रोग", "योग", "अन्य विशिष्ट रोग"
+      "श्वसनक ज्वर", "कुपोषण", "भगन्दर", "व्रण", "विदृधि", "अर्श", "अिस्थभंग", "अन्य रोग", "योग"
     ][i] || "रोग श्रेणी",
     nameEnglish: [
-      "Jwar / Fever", "Atisar / Diarrhoea", "Vaman / Vomiting", "Shwaskas / Asthma", "Amlapitta / Hyperacidity", "Pandu / Anemia", "Kamla / Jaundice", "Udar Rog / Abdominal", "Prameh / Diabetes", "Mutra Rog / Urinary",
+      "Jwar / Fever", "Atisar / Diarrhoea", "Vaman / Vomiting", "Shwaskas / Asthma/Cough", "Amlapitta / Hyperacidity", "Pandu / Anemia", "Kamla / Jaundice", "Udar Rog / Abdominal", "Prameh / Diabetes/Urinary", "Mutra Rog / Urinary",
       "Aamvaat / Rheumatoid", "Sandhivaat / Osteoarthritis", "Mano Rog / Psychiatric", "Netra Shoth / Eye", "Pakshaghat / Paralysis", "Gridhrasi / Sciatica", "Vaatrakta / Gout", "Vaat Vyadhi / Neuro", "Twak Vikar / Skin", "Uccharakta Chapa / HTN",
       "Hridaya Rog / Heart", "Rakta Pitta / Bleeding", "Shirorog / Headache", "Mukharog / Mouth", "Karna Rog / Ear", "Pradar Rog / Leukorrhea", "Rajorog / Menstrual", "Rakta Alpata / Anaemia", "Balatisar / Ped Diarrhoea", "Balashoth / Ped Oedema",
-      "Balajwar / Ped Fever", "Shwet Pradar / Leucorrhoea", "Sujaak / Gonorrhoea", "Aatashak / Syphilis", "Bhagandar / Fistula", "Arsh / Piles", "Krimi Rog / Worms", "Anya Rog / Others", "Yoga Beneficiaries", "Special Clinical"
+      "Shwasanak Jwar / Pneumonia", "Kuposhan / Malnutrition", "Bhagandar / Fistula", "Vrana / Ulcer/Wound", "Vidradhi / Abscess", "Arsha / Piles", "Asthibhanga / Fracture", "Anya Rog / Others", "Yoga / Yoga Beneficiaries"
     ][i] || "Clinical Condition",
     opd_male_new: 0,
     opd_male_old: 0,
@@ -810,7 +810,7 @@ export default function PremiumReportModal({
                       {standardDiseasesList.map((d: any) => (
                         <td key={d.sNo} className="p-0.5 font-mono font-extrabold text-slate-900 w-[23px] text-center">{d.sNo}</td>
                       ))}
-                      <td className="p-0.5 bg-emerald-100 font-black text-emerald-950 font-mono w-14 text-[9.5px]">39</td>
+                      <td className="p-0.5 bg-emerald-100 font-black text-emerald-950 font-mono w-14 text-[9.5px]">40</td>
                     </tr>
                     <tr className="bg-white border-b border-slate-400 divide-x divide-slate-400 text-[10px] font-bold text-slate-950 h-[82px]">
                       <td className="p-1 text-center font-sans font-extrabold text-[11px]">Disease</td>
@@ -1176,7 +1176,7 @@ export default function PremiumReportModal({
                       {standardDiseasesList.map((d: any) => (
                         <td key={d.sNo} className="p-0.5 font-mono font-extrabold text-slate-900 w-[23px] text-center">{d.sNo}</td>
                       ))}
-                      <td className="p-0.5 bg-emerald-100 font-black text-emerald-950 font-mono w-14 text-[9.5px]">39</td>
+                      <td className="p-0.5 bg-emerald-100 font-black text-emerald-950 font-mono w-14 text-[9.5px]">40</td>
                     </tr>
                     <tr className="bg-white border-b border-slate-400 divide-x divide-slate-400 text-[10px] font-bold text-slate-950 h-[82px]">
                       <td className="p-1 text-center font-sans font-extrabold text-[11px]">Disease</td>

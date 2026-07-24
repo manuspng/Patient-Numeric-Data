@@ -125,7 +125,33 @@ const INITIAL_MOCK_DB = {
     { id: "dis-10", name: "मूत्र रोग", category: "रोगवार विवरण" },
     { id: "dis-11", name: "आमवात", category: "रोगवार विवरण" },
     { id: "dis-12", name: "संधिवात", category: "रोगवार विवरण" },
-    { id: "dis-38", name: "अन्य रोग", category: "रोगवार विवरण" }
+    { id: "dis-13", name: "मनो रोग", category: "रोगवार विवरण" },
+    { id: "dis-14", name: "नेत्र शोथ", category: "रोगवार विवरण" },
+    { id: "dis-15", name: "पक्षाघात", category: "रोगवार विवरण" },
+    { id: "dis-16", name: "गृध्रसी", category: "रोगवार विवरण" },
+    { id: "dis-17", name: "वातरक्त", category: "रोगवार विवरण" },
+    { id: "dis-18", name: "वात व्याधि", category: "रोगवार विवरण" },
+    { id: "dis-19", name: "त्वक विकार", category: "रोगवार विवरण" },
+    { id: "dis-20", name: "ऊँच्चरक्त चाप", category: "रोगवार विवरण" },
+    { id: "dis-21", name: "हृदय रोग", category: "रोगवार विवरण" },
+    { id: "dis-22", name: "रक्त पित्त", category: "रोगवार विवरण" },
+    { id: "dis-23", name: "शिरोरोग", category: "रोगवार विवरण" },
+    { id: "dis-24", name: "मुखरोग", category: "रोगवार विवरण" },
+    { id: "dis-25", name: "कर्ण रोग", category: "रोगवार विवरण" },
+    { id: "dis-26", name: "प्रदर रोग", category: "रोगवार विवरण" },
+    { id: "dis-27", name: "रजोरोग", category: "रोगवार विवरण" },
+    { id: "dis-28", name: "रक्तअल्पता", category: "रोगवार विवरण" },
+    { id: "dis-29", name: "बालातिसार", category: "रोगवार विवरण" },
+    { id: "dis-30", name: "बालशोथ", category: "रोगवार विवरण" },
+    { id: "dis-31", name: "श्वसनक ज्वर", category: "रोगवार विवरण" },
+    { id: "dis-32", name: "कुपोषण", category: "रोगवार विवरण" },
+    { id: "dis-33", name: "भगन्दर", category: "रोगवार विवरण" },
+    { id: "dis-34", name: "व्रण", category: "रोगवार विवरण" },
+    { id: "dis-35", name: "विदृधि", category: "रोगवार विवरण" },
+    { id: "dis-36", name: "अर्श", category: "रोगवार विवरण" },
+    { id: "dis-37", name: "अिस्थभंग", category: "रोगवार विवरण" },
+    { id: "dis-38", name: "अन्य रोग", category: "रोगवार विवरण" },
+    { id: "dis-39", name: "योग", category: "रोगवार विवरण" }
   ],
   masterTests: [
     { id: "test-hb", name: "Hemoglobin (Hb)", normalRange: "12-16 g/dL" },
@@ -626,6 +652,93 @@ const customFetch = async function (input: any, init?: any) {
           const panchkarma_total = panchkarma_male + panchkarma_female + panchkarma_child + panchkarma_elderly;
           const total_tests = hemoglobin + blood_sugar + malaria + dengue + urine_sugar + urine_albumin + typhoid + hepatitis_a + hepatitis_b + hepatitis_c + pregnancy_tests;
 
+          // Aggregate disease logs for this hospital
+          const diseaseTotalsList = db.masterDiseases.map((d: any, idx: number) => ({
+            sNo: idx + 1,
+            nameHindi: d.name,
+            nameEnglish: d.name === "योग" ? "Yoga / Yoga Beneficiaries" : d.name,
+            opd_male_new: 0,
+            opd_male_old: 0,
+            opd_female_new: 0,
+            opd_female_old: 0,
+            opd_child_new: 0,
+            opd_child_old: 0,
+            opd_total: 0
+          }));
+
+          reports.forEach((r: any) => {
+            if (Array.isArray(r.diseaseLogs)) {
+              r.diseaseLogs.forEach((dl: any) => {
+                const match = diseaseTotalsList.find((dt: any) => 
+                  dt.nameHindi === dl.diseaseName || 
+                  (dl.diseaseId && dt.nameHindi === db.masterDiseases.find((md: any) => md.id === dl.diseaseId)?.name)
+                );
+                if (match) {
+                  match.opd_male_new += Number(dl.opd_male_new || 0);
+                  match.opd_male_old += Number(dl.opd_male_old || 0);
+                  match.opd_female_new += Number(dl.opd_female_new || 0);
+                  match.opd_female_old += Number(dl.opd_female_old || 0);
+                  match.opd_child_new += Number(dl.opd_child_new || 0);
+                  match.opd_child_old += Number(dl.opd_child_old || 0);
+                } else {
+                  const anyaRogMatch = diseaseTotalsList.find((dt: any) => dt.nameHindi === "अन्य रोग");
+                  if (anyaRogMatch) {
+                    anyaRogMatch.opd_male_new += Number(dl.opd_male_new || 0);
+                    anyaRogMatch.opd_male_old += Number(dl.opd_male_old || 0);
+                    anyaRogMatch.opd_female_new += Number(dl.opd_female_new || 0);
+                    anyaRogMatch.opd_female_old += Number(dl.opd_female_old || 0);
+                    anyaRogMatch.opd_child_new += Number(dl.opd_child_new || 0);
+                    anyaRogMatch.opd_child_old += Number(dl.opd_child_old || 0);
+                  }
+                }
+              });
+            }
+          });
+
+          // Compute totals per disease
+          diseaseTotalsList.forEach((dt: any) => {
+            dt.opd_total = dt.opd_male_new + dt.opd_male_old + dt.opd_female_new + dt.opd_female_old + dt.opd_child_new + dt.opd_child_old;
+          });
+
+          // If no disease entries are present, mock distribute them so tables/charts aren't empty
+          const totalDiseaseCount = diseaseTotalsList.reduce((sum: number, d: any) => sum + d.opd_total, 0);
+          if (totalDiseaseCount === 0 && opd_total > 0) {
+            const distributionFactors: Record<number, number> = {
+              1: 0.04, 2: 0.02, 4: 0.06, 5: 0.04, 8: 0.08, 9: 0.04, 12: 0.28, 19: 0.09, 20: 0.04, 38: 0.20, 39: 0.05
+            };
+            let allocatedTotal = 0;
+            diseaseTotalsList.forEach((dt: any) => {
+              const factor = distributionFactors[dt.sNo] || 0.005;
+              const diseaseOPDTotal = Math.round(opd_total * factor);
+              const mRatio = (opd_male_new + opd_male_old) / (opd_total || 1);
+              const fRatio = (opd_female_new + opd_female_old) / (opd_total || 1);
+              const cRatio = (opd_child_new + opd_child_old) / (opd_total || 1);
+
+              const totalMale = Math.round(diseaseOPDTotal * mRatio);
+              dt.opd_male_new = Math.round(totalMale * 0.7);
+              dt.opd_male_old = totalMale - dt.opd_male_new;
+
+              const totalFemale = Math.round(diseaseOPDTotal * fRatio);
+              dt.opd_female_new = Math.round(totalFemale * 0.7);
+              dt.opd_female_old = totalFemale - dt.opd_female_new;
+
+              const totalChild = Math.round(diseaseOPDTotal * cRatio);
+              dt.opd_child_new = Math.round(totalChild * 0.7);
+              dt.opd_child_old = totalChild - dt.opd_child_new;
+
+              dt.opd_total = dt.opd_male_new + dt.opd_male_old + dt.opd_female_new + dt.opd_female_old + dt.opd_child_new + dt.opd_child_old;
+              allocatedTotal += dt.opd_total;
+            });
+            const diff = opd_total - allocatedTotal;
+            if (diff !== 0) {
+              const anyaRogMatch = diseaseTotalsList.find((dt: any) => dt.nameHindi === "अन्य रोग");
+              if (anyaRogMatch) {
+                anyaRogMatch.opd_male_new = Math.max(0, anyaRogMatch.opd_male_new + diff);
+                anyaRogMatch.opd_total = anyaRogMatch.opd_male_new + anyaRogMatch.opd_male_old + anyaRogMatch.opd_female_new + anyaRogMatch.opd_female_old + anyaRogMatch.opd_child_new + anyaRogMatch.opd_child_old;
+              }
+            }
+          }
+
           return {
             hospitalId: hosp.id,
             hospitalName: hosp.name,
@@ -645,8 +758,42 @@ const customFetch = async function (input: any, init?: any) {
             camp_count, camp_beneficiaries_total, camp_medicines_distributed, camp_ncd_screenings, camp_ayurvidya_sessions,
             camps: campsList,
             inventory: [],
-            diseaseTotals: []
+            diseaseTotals: diseaseTotalsList
           };
+        });
+
+        // Aggregate diseaseTotals across all hospitals for districtTotal
+        const districtDiseaseTotals: Record<number, any> = {};
+        db.masterDiseases.forEach((d: any, idx: number) => {
+          districtDiseaseTotals[idx + 1] = {
+            sNo: idx + 1,
+            nameHindi: d.name,
+            nameEnglish: d.name === "योग" ? "Yoga / Yoga Beneficiaries" : d.name,
+            opd_male_new: 0,
+            opd_male_old: 0,
+            opd_female_new: 0,
+            opd_female_old: 0,
+            opd_child_new: 0,
+            opd_child_old: 0,
+            opd_total: 0
+          };
+        });
+
+        hospitalAggregates.forEach((h: any) => {
+          if (Array.isArray(h.diseaseTotals)) {
+            h.diseaseTotals.forEach((dt: any) => {
+              const dTarget = districtDiseaseTotals[dt.sNo];
+              if (dTarget) {
+                dTarget.opd_male_new += dt.opd_male_new || 0;
+                dTarget.opd_male_old += dt.opd_male_old || 0;
+                dTarget.opd_female_new += dt.opd_female_new || 0;
+                dTarget.opd_female_old += dt.opd_female_old || 0;
+                dTarget.opd_child_new += dt.opd_child_new || 0;
+                dTarget.opd_child_old += dt.opd_child_old || 0;
+                dTarget.opd_total += dt.opd_total || 0;
+              }
+            });
+          }
         });
 
         const districtTotal = {
@@ -694,7 +841,8 @@ const customFetch = async function (input: any, init?: any) {
           camp_medicines_distributed: hospitalAggregates.reduce((s, h) => s + h.camp_medicines_distributed, 0),
           camp_ncd_screenings: hospitalAggregates.reduce((s, h) => s + h.camp_ncd_screenings, 0),
           camp_ayurvidya_sessions: hospitalAggregates.reduce((s, h) => s + h.camp_ayurvidya_sessions, 0),
-          camps: hospitalAggregates.reduce((acc, h) => acc.concat(h.camps || []), [] as any[])
+          camps: hospitalAggregates.reduce((acc, h) => acc.concat(h.camps || []), [] as any[]),
+          diseaseTotals: Object.values(districtDiseaseTotals)
         };
 
         let responseHospitals = hospitalAggregates;

@@ -558,7 +558,8 @@ export default function CalendarEntry({
         { id: "dis-35", name: "विदृधि", category: "रोगवार विवरण" },
         { id: "dis-36", name: "अर्श", category: "रोगवार विवरण" },
         { id: "dis-37", name: "अिस्थभंग", category: "रोगवार विवरण" },
-        { id: "dis-38", name: "अन्य रोग", category: "रोगवार विवरण" }
+        { id: "dis-38", name: "अन्य रोग", category: "रोगवार विवरण" },
+        { id: "dis-39", name: "योग", category: "रोगवार विवरण" }
       ];
 
       try {
