@@ -235,7 +235,29 @@ const getLocalMockDB = () => {
   const existing = safeStorage.getItem("mpr_simulated_db");
   if (existing) {
     try {
-      return JSON.parse(existing);
+      const parsed = JSON.parse(existing);
+      let updated = false;
+
+      if (!parsed.hospitals || parsed.hospitals.length === 0 || !parsed.hospitals.some((h: any) => h.id === "hosp-jhankat")) {
+        parsed.hospitals = INITIAL_MOCK_DB.hospitals;
+        updated = true;
+      }
+
+      if (!parsed.masterDiseases || parsed.masterDiseases.length < 39) {
+        parsed.masterDiseases = INITIAL_MOCK_DB.masterDiseases;
+        updated = true;
+      }
+
+      const jhankatReports = (parsed.dailyReports || []).filter((r: any) => r.hospitalId === "hosp-jhankat" || r.hospitalId === "hosp-d1dgsvb7d");
+      if (jhankatReports.length === 0) {
+        parsed.dailyReports = [...(parsed.dailyReports || []), ...INITIAL_MOCK_DB.dailyReports];
+        updated = true;
+      }
+
+      if (updated) {
+        safeStorage.setItem("mpr_simulated_db", JSON.stringify(parsed));
+      }
+      return parsed;
     } catch {
       // fallback
     }
