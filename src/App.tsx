@@ -321,6 +321,7 @@ const customFetch = async function (input: any, init?: any) {
 
     if (forceMockBackend) {
       console.log(`[MOCK ROUTER] Intercepting: ${urlStr}`);
+      try {
       let parsedUrl;
       try {
         parsedUrl = new URL(urlStr, window.location.origin);
@@ -950,6 +951,18 @@ const customFetch = async function (input: any, init?: any) {
         status: statusCode,
         headers: { "Content-Type": "application/json" }
       });
+      } catch (mockErr: any) {
+        console.error("[MOCK ROUTER] Internal error in client-side simulation:", mockErr);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          message: `Client simulation error: ${mockErr?.message || "Unknown error"}`,
+          districtTotal: null,
+          hospitals: []
+        }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
     }
   }
 

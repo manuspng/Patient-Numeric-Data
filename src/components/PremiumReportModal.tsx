@@ -40,6 +40,7 @@ export default function PremiumReportModal({
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>("consolidated");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   // Proforma 1 and 2 metadata inputs
   const [dispatchNo, setDispatchNo] = useState("");
@@ -201,7 +202,7 @@ export default function PremiumReportModal({
     }
 
     fetchReportData();
-  }, [selectedMonth, user, isOpen, isPreviewMode, reportType]);
+  }, [selectedMonth, user, isOpen, isPreviewMode, reportType, retryCount]);
 
   if (!isOpen) return null;
 
@@ -1891,12 +1892,20 @@ export default function PremiumReportModal({
               <AlertTriangle className="w-12 h-12 text-rose-500 mb-4" />
               <p className="font-bold text-slate-800">Error Generating Report</p>
               <p className="text-xs text-slate-500 mt-2">{error}</p>
-              <button 
-                onClick={() => setSelectedMonth(initialMonth)}
-                className="mt-6 bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl hover:bg-slate-900 transition-colors"
-              >
-                Reset to Default Month
-              </button>
+              <div className="flex gap-3 mt-6">
+                <button 
+                  onClick={() => { setError(null); setSelectedMonth(initialMonth); }}
+                  className="bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl hover:bg-slate-900 transition-colors"
+                >
+                  Reset to Default Month
+                </button>
+                <button 
+                  onClick={() => { setError(null); setDistrictTotal(null); setFetchedHospitals([]); setRetryCount(c => c + 1); }}
+                  className="bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl hover:bg-emerald-800 transition-colors"
+                >
+                  Retry
+                </button>
+              </div>
             </div>
           ) : hospitalData ? (
             <div className="flex-1">
