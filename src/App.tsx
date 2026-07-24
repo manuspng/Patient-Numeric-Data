@@ -231,35 +231,27 @@ INITIAL_MOCK_DB.hospitals.forEach((h) => {
 
 let memoryDBFallback: any = null;
 
+const MOCK_DB_VERSION = "v3-39diseases-jhankat";
+
 const getLocalMockDB = () => {
+  const storedVersion = safeStorage.getItem("mpr_simulated_db_version");
+  
+  // If version mismatch, wipe stale cache completely and start fresh
+  if (storedVersion !== MOCK_DB_VERSION) {
+    console.log(`[MOCK DB] Version mismatch (stored: ${storedVersion}, expected: ${MOCK_DB_VERSION}). Resetting to fresh database.`);
+    safeStorage.removeItem("mpr_simulated_db");
+    safeStorage.setItem("mpr_simulated_db_version", MOCK_DB_VERSION);
+    safeStorage.setItem("mpr_simulated_db", JSON.stringify(INITIAL_MOCK_DB));
+    memoryDBFallback = JSON.parse(JSON.stringify(INITIAL_MOCK_DB));
+    return memoryDBFallback;
+  }
+
   const existing = safeStorage.getItem("mpr_simulated_db");
   if (existing) {
     try {
-      const parsed = JSON.parse(existing);
-      let updated = false;
-
-      if (!parsed.hospitals || parsed.hospitals.length === 0 || !parsed.hospitals.some((h: any) => h.id === "hosp-jhankat")) {
-        parsed.hospitals = INITIAL_MOCK_DB.hospitals;
-        updated = true;
-      }
-
-      if (!parsed.masterDiseases || parsed.masterDiseases.length < 39) {
-        parsed.masterDiseases = INITIAL_MOCK_DB.masterDiseases;
-        updated = true;
-      }
-
-      const jhankatReports = (parsed.dailyReports || []).filter((r: any) => r.hospitalId === "hosp-jhankat" || r.hospitalId === "hosp-d1dgsvb7d");
-      if (jhankatReports.length === 0) {
-        parsed.dailyReports = [...(parsed.dailyReports || []), ...INITIAL_MOCK_DB.dailyReports];
-        updated = true;
-      }
-
-      if (updated) {
-        safeStorage.setItem("mpr_simulated_db", JSON.stringify(parsed));
-      }
-      return parsed;
+      return JSON.parse(existing);
     } catch {
-      // fallback
+      // corrupted, reset
     }
   }
   
