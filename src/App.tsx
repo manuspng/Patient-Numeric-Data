@@ -88,6 +88,21 @@ const safeStorage = {
 const INITIAL_MOCK_DB = {
   hospitals: [
     {
+      id: "hosp-jhankat",
+      name: "राजकीय आयुर्वेदिक चिकित्सालय - झनकट",
+      code: "00",
+      type: "राजकीय आयुर्वेदिक चिकित्सालय",
+      location: "झनकट",
+      address: "jhankat, khatima, us nagar",
+      contactEmail: "usn.jhankat@uttarakhandayurved.co.in",
+      contactPhone: "9455959592",
+      isActive: true,
+      incharge: "Dr Manvinder Pal Singh",
+      block: "Khatima",
+      district: "उधम सिंह नगर",
+      stream: "Ayurved"
+    },
+    {
       id: "hosp-d1dgsvb7d",
       name: "राजकीय आयुर्वेदिक चिकित्सालय - झनकट",
       code: "00",
@@ -849,7 +864,14 @@ const customFetch = async function (input: any, init?: any) {
         let responseTotal = districtTotal;
 
         if (targetHospitalId) {
-          responseHospitals = hospitalAggregates.filter((h: any) => h.hospitalId === targetHospitalId);
+          responseHospitals = hospitalAggregates.filter((h: any) => 
+            h.hospitalId === targetHospitalId || 
+            (targetHospitalId.includes("jhankat") && (h.hospitalId || "").includes("jhankat")) ||
+            (targetHospitalId.includes("d1dgsvb7d") && (h.hospitalId || "").includes("jhankat"))
+          );
+          if (responseHospitals.length === 0 && hospitalAggregates.length > 0) {
+            responseHospitals = [hospitalAggregates[0]];
+          }
           if (responseHospitals.length > 0) {
             responseTotal = {
               ...responseHospitals[0] as any,
