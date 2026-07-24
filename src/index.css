@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply antialiased text-slate-800 bg-slate-50 font-sans;
+  }
+}
+
+/* Animations helpers */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.2s ease-in-out infinite;
+  animation-iteration-count: 2;
+}
+
+/* Official Print media styles */
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  .print\:border-0 {
+    border: 0 !important;
+  }
+  .print\:shadow-none {
+    box-shadow: none !important;
+  }
+  #app-wrapper, #dashboard-core, #mpr-report-root {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+  table {
+    page-break-inside: auto;
+  }
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+}
+
+/* Custom font override for the proforma document elements */
+.proforma-container, 
+.proforma-container * {
+  font-family: 'Times New Roman', Times, serif !important;
+}
+
+/* Increase the font size of just those texts by 1 px */
+.proforma-container .text-\[6px\] { font-size: 7px !important; }
+.proforma-container .text-\[7.5px\] { font-size: 8.5px !important; }
+.proforma-container .text-\[8px\] { font-size: 9px !important; }
+.proforma-container .text-\[8.5px\] { font-size: 9.5px !important; }
+.proforma-container .text-\[9px\] { font-size: 10px !important; }
+.proforma-container .text-\[9.5px\] { font-size: 10.5px !important; }
+.proforma-container .text-\[10px\] { font-size: 11px !important; }
+.proforma-container .text-\[10.5px\] { font-size: 11.5px !important; }
+.proforma-container .text-\[11px\] { font-size: 12px !important; }
+.proforma-container .text-\[11.5px\] { font-size: 12.5px !important; }
+.proforma-container .text-\[12px\] { font-size: 13px !important; }
+.proforma-container .text-\[13px\] { font-size: 14px !important; }
+.proforma-container .text-\[14px\] { font-size: 15px !important; }
+.proforma-container .text-xs { font-size: 13px !important; }
+.proforma-container .text-sm { font-size: 15px !important; }
+.proforma-container .text-md { font-size: 17px !important; }
+.proforma-container .text-lg { font-size: 19px !important; }
+.proforma-container .text-xl { font-size: 21px !important; }
+.proforma-container .text-2xl { font-size: 25px !important; }
+

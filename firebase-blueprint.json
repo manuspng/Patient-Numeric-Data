@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "hospitalId": { "type": "string" },
+        "phone": { "type": "string" },
+        "isWhitelisted": { "type": "boolean" }
+      },
+      "required": ["id", "email", "name", "role", "isWhitelisted"]
+    },
+    "RegistrationRequest": {
+      "title": "RegistrationRequest",
+      "description": "User registration request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "hospitalId": { "type": "string" },
+        "phone": { "type": "string" },
+        "requestedAt": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "email", "name", "role", "status"]
+    },
+    "Hospital": {
+      "title": "Hospital",
+      "description": "Hospital configuration and metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "type": { "type": "string" },
+        "address": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "stream": { "type": "string" },
+        "location": { "type": "string" },
+        "block": { "type": "string" },
+        "district": { "type": "string" },
+        "incharge": { "type": "string" }
+      },
+      "required": ["id", "name", "code", "type", "isActive"]
+    },
+    "DailyReport": {
+      "title": "DailyReport",
+      "description": "Daily statistical metrics report from hospital",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "hospitalId": { "type": "string" },
+        "recordDate": { "type": "string" },
+        "submittedAt": { "type": "string" },
+        "submittedBy": { "type": "string" },
+        "isLocked": { "type": "boolean" },
+        "anomalyConfirmed": { "type": "boolean" }
+      },
+      "required": ["id", "hospitalId", "recordDate", "submittedAt", "submittedBy", "isLocked"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles collection"
+    },
+    "/registrationRequests/{requestId}": {
+      "schema": "RegistrationRequest",
+      "description": "Hospital user registration requests"
+    },
+    "/hospitals/{hospitalId}": {
+      "schema": "Hospital",
+      "description": "Registered hospitals master directory"
+    },
+    "/dailyReports/{reportId}": {
+      "schema": "DailyReport",
+      "description": "Daily metrics reports from hospitals"
+    }
+  }
+}

@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Zero-Trust Default: deny all unmapped write/read access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Secure rule-set for registered users profile information
+    match /users/{userId} {
+      allow read, write: if request.auth != null && (
+        request.auth.token.email == 'backend-system@hospital-sync.internal' ||
+        request.auth.token.email == 'manu.spng@gmail.com' ||
+        request.auth.token.email == userId ||
+        request.auth.uid == userId
+      );
+    }
+
+    // Secure rule-set for registration requests
+    match /registrationRequests/{requestId} {
+      allow read, write: if request.auth != null && (
+        request.auth.token.email == 'backend-system@hospital-sync.internal' ||
+        request.auth.token.email == 'manu.spng@gmail.com'
+      );
+    }
+
+    // Secure rule-set for hospitals master directory
+    match /hospitals/{hospitalId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (
+        request.auth.token.email == 'backend-system@hospital-sync.internal' ||
+        request.auth.token.email == 'manu.spng@gmail.com'
+      );
+    }
+
+    // Secure rule-set for daily reports submissions
+    match /dailyReports/{reportId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (
+        request.auth.token.email == 'backend-system@hospital-sync.internal' ||
+        request.auth.token.email == 'manu.spng@gmail.com' ||
+        (request.resource.data != null && request.resource.data.submittedBy == request.auth.token.email)
+      );
+    }
+  }
+}
