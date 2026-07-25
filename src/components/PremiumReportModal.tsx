@@ -1575,48 +1575,72 @@ export default function PremiumReportModal({
           <div className="flex flex-col lg:flex-row lg:flex-wrap items-stretch lg:items-center gap-2.5 w-full lg:w-auto">
             
             <div className="flex flex-row items-stretch items-center gap-2 w-full lg:w-auto">
-              {/* Month selector */}
-              <div className="flex-1 lg:flex-initial flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-xs">
-                <span className="text-[10px] uppercase font-bold text-slate-400">Month:</span>
-                <div className="flex items-center gap-1">
+              {/* Selector: Financial Year for Proforma 2, Month for other reports */}
+              {reportType === "proforma2" ? (
+                <div className="flex-1 lg:flex-initial flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-xs">
+                  <span className="text-[10px] uppercase font-bold text-amber-700">Financial Year:</span>
                   <select
-                    value={selectedMonth.split("-")[1] || "01"}
+                    value={(() => {
+                      const parts = selectedMonth.split("-");
+                      const y = parseInt(parts[0], 10);
+                      const m = parseInt(parts[1], 10);
+                      return m >= 4 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+                    })()}
                     onChange={(e) => {
-                      const currentYear = selectedMonth.split("-")[0] || "2026";
-                      const newMonth = e.target.value;
-                      setSelectedMonth(`${currentYear}-${newMonth}`);
+                      const [startYear] = e.target.value.split("-");
+                      setSelectedMonth(`${startYear}-06`);
                     }}
-                    className="bg-transparent text-xs font-bold text-slate-800 outline-none border-none py-0 cursor-pointer"
+                    className="bg-transparent text-xs font-extrabold text-slate-850 outline-none border-none py-0 cursor-pointer"
                   >
-                    <option value="01">Jan</option>
-                    <option value="02">Feb</option>
-                    <option value="03">Mar</option>
-                    <option value="04">Apr</option>
-                    <option value="05">May</option>
-                    <option value="06">Jun</option>
-                    <option value="07">Jul</option>
-                    <option value="08">Aug</option>
-                    <option value="09">Sep</option>
-                    <option value="10">Oct</option>
-                    <option value="11">Nov</option>
-                    <option value="12">Dec</option>
-                  </select>
-                  <select
-                    value={selectedMonth.split("-")[0] || "2026"}
-                    onChange={(e) => {
-                      const currentMonth = selectedMonth.split("-")[1] || "01";
-                      const newYear = e.target.value;
-                      setSelectedMonth(`${newYear}-${currentMonth}`);
-                    }}
-                    className="bg-transparent text-xs font-bold text-slate-800 outline-none border-none py-0 cursor-pointer"
-                  >
-                    <option value="2024">2024</option>
-                    <option value="2025">2025</option>
-                    <option value="2026">2026</option>
-                    <option value="2027">2027</option>
+                    <option value="2024-2025">FY 2024-25</option>
+                    <option value="2025-2026">FY 2025-26</option>
+                    <option value="2026-2027">FY 2026-27</option>
+                    <option value="2027-2028">FY 2027-28</option>
                   </select>
                 </div>
-              </div>
+              ) : (
+                <div className="flex-1 lg:flex-initial flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-xs">
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Month:</span>
+                  <div className="flex items-center gap-1">
+                    <select
+                      value={selectedMonth.split("-")[1] || "01"}
+                      onChange={(e) => {
+                        const currentYear = selectedMonth.split("-")[0] || "2026";
+                        const newMonth = e.target.value;
+                        setSelectedMonth(`${currentYear}-${newMonth}`);
+                      }}
+                      className="bg-transparent text-xs font-bold text-slate-800 outline-none border-none py-0 cursor-pointer"
+                    >
+                      <option value="01">Jan</option>
+                      <option value="02">Feb</option>
+                      <option value="03">Mar</option>
+                      <option value="04">Apr</option>
+                      <option value="05">May</option>
+                      <option value="06">Jun</option>
+                      <option value="07">Jul</option>
+                      <option value="08">Aug</option>
+                      <option value="09">Sep</option>
+                      <option value="10">Oct</option>
+                      <option value="11">Nov</option>
+                      <option value="12">Dec</option>
+                    </select>
+                    <select
+                      value={selectedMonth.split("-")[0] || "2026"}
+                      onChange={(e) => {
+                        const currentMonth = selectedMonth.split("-")[1] || "01";
+                        const newYear = e.target.value;
+                        setSelectedMonth(`${newYear}-${currentMonth}`);
+                      }}
+                      className="bg-transparent text-xs font-bold text-slate-800 outline-none border-none py-0 cursor-pointer"
+                    >
+                      <option value="2024">2024</option>
+                      <option value="2025">2025</option>
+                      <option value="2026">2026</option>
+                      <option value="2027">2027</option>
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {/* Hospital filter if Super Admin or Office Admin */}
               {user.role !== UserRole.HOSPITAL_USER && fetchedHospitals.length > 0 && (
@@ -1684,29 +1708,6 @@ export default function PremiumReportModal({
               <div className="text-[10px] font-black uppercase text-emerald-800 tracking-wider">Live Editor:</div>
               
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:flex xl:flex-wrap items-center gap-1.5 w-full">
-                {reportType === "proforma2" && (
-                  <div className="flex items-center gap-1.5 bg-sky-50 border border-sky-200 rounded-lg px-2.5 py-1 min-w-0">
-                    <span className="text-[9px] text-sky-600 font-bold uppercase shrink-0">FY:</span>
-                    <select
-                      value={(() => {
-                        const parts = selectedMonth.split("-");
-                        const y = parseInt(parts[0], 10);
-                        const m = parseInt(parts[1], 10);
-                        return m >= 4 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
-                      })()}
-                      onChange={(e) => {
-                        const [startYear] = e.target.value.split("-");
-                        setSelectedMonth(`${startYear}-06`);
-                      }}
-                      className="bg-transparent text-xs font-bold text-sky-950 outline-none w-full min-w-0 border-none cursor-pointer p-0"
-                    >
-                      <option value="2024-2025">FY 24-25</option>
-                      <option value="2025-2026">FY 25-26</option>
-                      <option value="2026-2027">FY 26-27</option>
-                      <option value="2027-2028">FY 27-28</option>
-                    </select>
-                  </div>
-                )}
 
                 <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-2.5 py-1 min-w-0">
                   <span className="text-[9px] text-slate-400 font-bold uppercase shrink-0">पत्रांक:</span>

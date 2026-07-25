@@ -593,8 +593,22 @@ const customFetch = async function (input: any, init?: any) {
         let monthlyReports = [];
         // Filter out any malformed entries without recordDate
         const validReports = (db.dailyReports || []).filter((r: any) => r && r.recordDate && r.hospitalId);
+        const isAnnual = parsedUrl.searchParams.get("isAnnual") === "true";
         if (pathname === "/api/mpr/aggregate-custom") {
           monthlyReports = validReports.filter((r: any) => r.recordDate >= startDate && r.recordDate <= endDate);
+        } else if (isAnnual && month) {
+          const parts = month.split("-");
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10);
+          let fyStart: string, fyEnd: string;
+          if (m >= 4) {
+            fyStart = `${y}-04-01`;
+            fyEnd = `${y + 1}-03-31`;
+          } else {
+            fyStart = `${y - 1}-04-01`;
+            fyEnd = `${y}-03-31`;
+          }
+          monthlyReports = validReports.filter((r: any) => r.recordDate >= fyStart && r.recordDate <= fyEnd);
         } else {
           monthlyReports = validReports.filter((r: any) => (r.recordDate || "").startsWith(month));
         }
