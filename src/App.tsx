@@ -231,7 +231,7 @@ INITIAL_MOCK_DB.hospitals.forEach((h) => {
 
 let memoryDBFallback: any = null;
 
-const MOCK_DB_VERSION = "v3-39diseases-jhankat";
+const MOCK_DB_VERSION = "v4-fix-daily-report-save";
 
 const getLocalMockDB = () => {
   const storedVersion = safeStorage.getItem("mpr_simulated_db_version");
@@ -586,11 +586,14 @@ const customFetch = async function (input: any, init?: any) {
           const report = db.dailyReports.find((r: any) => r.hospitalId === hospId && r.recordDate === date);
           responseData = report || null;
         } else {
-          const report = body;
-          db.dailyReports = db.dailyReports || [];
-          db.dailyReports = db.dailyReports.filter((r: any) => !(r.hospitalId === report.hospitalId && r.recordDate === report.recordDate));
-          db.dailyReports.push(report);
-          saveLocalMockDB(db);
+          // CalendarEntry sends { report: {...}, userEmail: "..." } — unwrap to get the actual report
+          const report = body?.report || body;
+          if (report && report.recordDate && report.hospitalId) {
+            db.dailyReports = db.dailyReports || [];
+            db.dailyReports = db.dailyReports.filter((r: any) => !(r.hospitalId === report.hospitalId && r.recordDate === report.recordDate));
+            db.dailyReports.push(report);
+            saveLocalMockDB(db);
+          }
           responseData = { success: true };
         }
       }
@@ -601,10 +604,12 @@ const customFetch = async function (input: any, init?: any) {
         const endDate = parsedUrl.searchParams.get("endDate") || "";
         
         let monthlyReports = [];
+        // Filter out any malformed entries without recordDate
+        const validReports = (db.dailyReports || []).filter((r: any) => r && r.recordDate && r.hospitalId);
         if (pathname === "/api/mpr/aggregate-custom") {
-          monthlyReports = db.dailyReports.filter((r: any) => r.recordDate >= startDate && r.recordDate <= endDate);
+          monthlyReports = validReports.filter((r: any) => r.recordDate >= startDate && r.recordDate <= endDate);
         } else {
-          monthlyReports = db.dailyReports.filter((r: any) => r.recordDate.startsWith(month));
+          monthlyReports = validReports.filter((r: any) => (r.recordDate || "").startsWith(month));
         }
 
         const activeHospitals = db.hospitals || [];
@@ -908,7 +913,7 @@ const customFetch = async function (input: any, init?: any) {
         const month = parsedUrl.searchParams.get("month");
         const activeHospitals = db.hospitals;
         const defaulters = activeHospitals.map((h: any) => {
-          const count = db.dailyReports.filter((r: any) => r.hospitalId === h.id && r.recordDate.startsWith(month || "")).length;
+          const count = db.dailyReports.filter((r: any) => r && r.hospitalId === h.id && (r.recordDate || "").startsWith(month || "")).length;
           return {
             hospitalId: h.id,
             hospitalName: h.name,
