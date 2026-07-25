@@ -88,21 +88,6 @@ const safeStorage = {
 const INITIAL_MOCK_DB = {
   hospitals: [
     {
-      id: "hosp-jhankat",
-      name: "राजकीय आयुर्वेदिक चिकित्सालय - झनकट",
-      code: "00",
-      type: "राजकीय आयुर्वेदिक चिकित्सालय",
-      location: "झनकट",
-      address: "jhankat, khatima, us nagar",
-      contactEmail: "usn.jhankat@uttarakhandayurved.co.in",
-      contactPhone: "9455959592",
-      isActive: true,
-      incharge: "Dr Manvinder Pal Singh",
-      block: "Khatima",
-      district: "उधम सिंह नगर",
-      stream: "Ayurved"
-    },
-    {
       id: "hosp-d1dgsvb7d",
       name: "राजकीय आयुर्वेदिक चिकित्सालय - झनकट",
       code: "00",
@@ -196,7 +181,7 @@ const INITIAL_MOCK_DB = {
 
 let memoryDBFallback: any = null;
 
-const MOCK_DB_VERSION = "v5-no-mock-reports";
+const MOCK_DB_VERSION = "v6-single-hospital-fix-fields";
 
 const getLocalMockDB = () => {
   // 1. If we have an in-memory state from this session, always use it (fastest, always up-to-date)
@@ -598,6 +583,7 @@ const customFetch = async function (input: any, init?: any) {
           let camp_count = 0, camp_beneficiaries_total = 0, camp_medicines_distributed = 0;
           let camp_ncd_screenings = 0, camp_ayurvidya_sessions = 0;
           let campsList: any[] = [];
+          let levy_charges = 0, aadhaar_seeded_count = 0, mobile_seeded_count = 0;
 
           reports.forEach((r: any) => {
             const pm = r.patientMatrix || {};
@@ -623,7 +609,11 @@ const customFetch = async function (input: any, init?: any) {
             panchkarma_child += Number(pm.panchkarma_child || 0);
             panchkarma_elderly += Number(pm.panchkarma_elderly || 0);
 
-            const labs = r.laboratoryData || {};
+            levy_charges += Number(pm.levy_charges || 0);
+            aadhaar_seeded_count += Number(pm.aadhaar_seeded_count || 0);
+            mobile_seeded_count += Number(pm.mobile_seeded_count || 0);
+
+            const labs = r.investigationsLab || r.laboratoryData || {};
             hemoglobin += Number(labs.hemoglobin || 0);
             blood_sugar += Number(labs.blood_sugar || 0);
             malaria += Number(labs.malaria || 0);
@@ -636,23 +626,25 @@ const customFetch = async function (input: any, init?: any) {
             hepatitis_c += Number(labs.hepatitis_c || 0);
             pregnancy_tests += Number(labs.pregnancy_tests || 0);
 
-            if (r.campData) {
+            // Support both r.camps (CalendarEntry format) and r.campData (legacy)
+            const campEntries = Array.isArray(r.camps) ? r.camps : (r.campData ? [r.campData] : []);
+            campEntries.forEach((camp: any) => {
               camp_count++;
-              camp_beneficiaries_total += Number(r.campData.beneficiaries_total || 0);
-              camp_medicines_distributed += Number(r.campData.medicine_distributed_count || 0);
-              camp_ncd_screenings += Number(r.campData.ncd_screenings || 0);
-              camp_ayurvidya_sessions += Number(r.campData.ayurvidya_sessions || 0);
+              camp_beneficiaries_total += Number(camp.beneficiaries_total || camp.totalBeneficiaries || 0);
+              camp_medicines_distributed += Number(camp.medicine_distributed_count || camp.medicinesDistributed || 0);
+              camp_ncd_screenings += Number(camp.ncd_screenings || camp.ncdScreenings || 0);
+              camp_ayurvidya_sessions += Number(camp.ayurvidya_sessions || camp.ayurvidyaSessions || 0);
               campsList.push({
                 date: r.recordDate,
-                loc: r.campData.village_location || "",
-                male: r.campData.beneficiaries_male || 0,
-                female: r.campData.beneficiaries_female || 0,
-                child: r.campData.beneficiaries_child || 0,
-                total: r.campData.beneficiaries_total || 0,
-                meds: r.campData.medicine_distributed_count || 0,
-                screenings: r.campData.ncd_screenings || 0
+                loc: camp.village_location || camp.location || "",
+                male: camp.beneficiaries_male || camp.maleBeneficiaries || 0,
+                female: camp.beneficiaries_female || camp.femaleBeneficiaries || 0,
+                child: camp.beneficiaries_child || camp.childBeneficiaries || 0,
+                total: camp.beneficiaries_total || camp.totalBeneficiaries || 0,
+                meds: camp.medicine_distributed_count || camp.medicinesDistributed || 0,
+                screenings: camp.ncd_screenings || camp.ncdScreenings || 0
               });
-            }
+            });
           });
 
           const opd_total = opd_male_new + opd_male_old + opd_female_new + opd_female_old + opd_child_new + opd_child_old + opd_elderly_new + opd_elderly_old;
@@ -765,6 +757,7 @@ const customFetch = async function (input: any, init?: any) {
             camp_count, camp_beneficiaries_total, camp_medicines_distributed, camp_ncd_screenings, camp_ayurvidya_sessions,
             camps: campsList,
             inventory: [],
+            levy_charges, aadhaar_seeded_count, mobile_seeded_count,
             diseaseTotals: diseaseTotalsList
           };
         });
@@ -857,9 +850,7 @@ const customFetch = async function (input: any, init?: any) {
 
         if (targetHospitalId) {
           responseHospitals = hospitalAggregates.filter((h: any) => 
-            h.hospitalId === targetHospitalId || 
-            (targetHospitalId.includes("jhankat") && (h.hospitalId || "").includes("jhankat")) ||
-            (targetHospitalId.includes("d1dgsvb7d") && (h.hospitalId || "").includes("jhankat"))
+            h.hospitalId === targetHospitalId
           );
           if (responseHospitals.length === 0 && hospitalAggregates.length > 0) {
             responseHospitals = [hospitalAggregates[0]];
