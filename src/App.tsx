@@ -544,7 +544,33 @@ const customFetch = async function (input: any, init?: any) {
           if (report) {
             responseData = { success: true, report: report, isNew: false };
           } else {
-            responseData = { success: false, report: null, isNew: true };
+            // Return a skeleton report with default kit types (matching Express server behavior)
+            const defaultInventory = [
+              { kit_type: "Hemoglobin Strips", opening_balance: 0, received_qty: 0, used_qty: 0, defective_qty: 0, closing_balance: 0, low_stock_threshold: 20 },
+              { kit_type: "Blood Sugar Strips", opening_balance: 0, received_qty: 0, used_qty: 0, defective_qty: 0, closing_balance: 0, low_stock_threshold: 30 },
+              { kit_type: "Urine Multiparameter Strips", opening_balance: 0, received_qty: 0, used_qty: 0, defective_qty: 0, closing_balance: 0, low_stock_threshold: 25 },
+              { kit_type: "Malaria Antigen Cards", opening_balance: 0, received_qty: 0, used_qty: 0, defective_qty: 0, closing_balance: 0, low_stock_threshold: 15 },
+              { kit_type: "Dengue Rapid Cards", opening_balance: 0, received_qty: 0, used_qty: 0, defective_qty: 0, closing_balance: 0, low_stock_threshold: 10 },
+              { kit_type: "Typhoid Test Cards", opening_balance: 0, received_qty: 0, used_qty: 0, defective_qty: 0, closing_balance: 0, low_stock_threshold: 15 },
+              { kit_type: "Pregnancy HCG Cassettes", opening_balance: 0, received_qty: 0, used_qty: 0, defective_qty: 0, closing_balance: 0, low_stock_threshold: 12 }
+            ];
+            responseData = { 
+              success: true, 
+              report: {
+                id: `rep-${hospId}-${date}`,
+                hospitalId: hospId,
+                recordDate: date,
+                patientMatrix: {},
+                investigationsLab: {},
+                inventory: defaultInventory,
+                camps: [],
+                diseaseLogs: [],
+                isLocked: false,
+                anomalyConfirmed: false,
+                anomalyFlags: []
+              }, 
+              isNew: true 
+            };
           }
         } else {
           // CalendarEntry sends { report: {...}, userEmail: "..." } — unwrap to get the actual report
