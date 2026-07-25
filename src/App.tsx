@@ -541,7 +541,11 @@ const customFetch = async function (input: any, init?: any) {
           const date = parsedUrl.searchParams.get("date");
           const hospId = parsedUrl.searchParams.get("hospitalId");
           const report = db.dailyReports.find((r: any) => r.hospitalId === hospId && r.recordDate === date);
-          responseData = report || null;
+          if (report) {
+            responseData = { success: true, report: report, isNew: false };
+          } else {
+            responseData = { success: false, report: null, isNew: true };
+          }
         } else {
           // CalendarEntry sends { report: {...}, userEmail: "..." } — unwrap to get the actual report
           const report = body?.report || body;
@@ -756,7 +760,35 @@ const customFetch = async function (input: any, init?: any) {
             total_tests,
             camp_count, camp_beneficiaries_total, camp_medicines_distributed, camp_ncd_screenings, camp_ayurvidya_sessions,
             camps: campsList,
-            inventory: [],
+            inventory: (() => {
+              // Aggregate inventory across all daily reports for this hospital
+              const invMap: Record<string, any> = {};
+              reports.forEach((r: any) => {
+                if (Array.isArray(r.inventory)) {
+                  r.inventory.forEach((inv: any) => {
+                    const key = inv.kit_type || inv.name || 'Unknown';
+                    if (!invMap[key]) {
+                      invMap[key] = {
+                        kit_type: key,
+                        opening_balance: Number(inv.opening_balance || 0),
+                        received_qty: 0,
+                        used_qty: 0,
+                        defective_qty: 0,
+                        closing_balance: 0
+                      };
+                    }
+                    invMap[key].received_qty += Number(inv.received_qty || 0);
+                    invMap[key].used_qty += Number(inv.used_qty || 0);
+                    invMap[key].defective_qty += Number(inv.defective_qty || 0);
+                  });
+                }
+              });
+              // Calculate closing balance
+              Object.values(invMap).forEach((inv: any) => {
+                inv.closing_balance = inv.opening_balance + inv.received_qty - inv.used_qty - inv.defective_qty;
+              });
+              return Object.values(invMap);
+            })(),
             levy_charges, aadhaar_seeded_count, mobile_seeded_count,
             diseaseTotals: diseaseTotalsList
           };
