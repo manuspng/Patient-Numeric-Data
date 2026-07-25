@@ -191,82 +191,54 @@ const INITIAL_MOCK_DB = {
   categories: [] as string[]
 };
 
-// Seed historical data so charts work out of the box in client simulation
-const todayStr = new Date().toISOString().split("T")[0];
-INITIAL_MOCK_DB.hospitals.forEach((h) => {
-  for (let i = 15; i >= 1; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().split("T")[0];
-    INITIAL_MOCK_DB.dailyReports.push({
-      id: `rep-${h.id}-${dateStr}`,
-      hospitalId: h.id,
-      recordDate: dateStr,
-      submittedAt: new Date(d.getTime() + 8 * 3600 * 1000).toISOString(),
-      submittedBy: `${h.id.split("-")[1]}.user@gov.in`,
-      patientMatrix: {
-        opd_male_new: 15 + (i % 5), opd_male_old: 5 + (i % 3),
-        opd_female_new: 20 + (i % 4), opd_female_old: 8 + (i % 2),
-        opd_child_new: 4, opd_child_old: 2,
-        opd_elderly_new: 6, opd_elderly_old: 3,
-        ipd_admissions: i % 2, ipd_bed_occupancy_percentage: 45 + (i % 10),
-        panchkarma_male: 3, panchkarma_female: 4, panchkarma_child: 0, panchkarma_elderly: 2,
-        levy_charges: 350, aadhaar_seeded_count: 30, mobile_seeded_count: 32
-      },
-      investigationsLab: {
-        hemoglobin: 12 + (i % 4), blood_sugar: 8 + (i % 3), urine_sugar: i % 2, urine_albumin: 0,
-        malaria: 0, dengue: 0, typhoid: i % 3 === 0 ? 1 : 0, hepatitis_a: 0, hepatitis_b: 0, hepatitis_c: 0, pregnancy_tests: 0
-      },
-      inventory: [
-        { kit_type: "Hemoglobin Strips", opening_balance: 80, received_qty: 0, used_qty: 12, defective_qty: 0, closing_balance: 68, low_stock_threshold: 20 },
-        { kit_type: "Blood Sugar Strips", opening_balance: 90, received_qty: 0, used_qty: 8, defective_qty: 0, closing_balance: 82, low_stock_threshold: 30 }
-      ],
-      camps: [] as any[],
-      isLocked: true,
-      anomalyConfirmed: false,
-      anomalyFlags: []
-    });
-  }
-});
+// No pre-seeded mock reports — Proformas will only show data the user actually submits
+
 
 let memoryDBFallback: any = null;
 
-const MOCK_DB_VERSION = "v4-fix-daily-report-save";
+const MOCK_DB_VERSION = "v5-no-mock-reports";
 
 const getLocalMockDB = () => {
-  const storedVersion = safeStorage.getItem("mpr_simulated_db_version");
-  
-  // If version mismatch, wipe stale cache completely and start fresh
-  if (storedVersion !== MOCK_DB_VERSION) {
-    console.log(`[MOCK DB] Version mismatch (stored: ${storedVersion}, expected: ${MOCK_DB_VERSION}). Resetting to fresh database.`);
-    safeStorage.removeItem("mpr_simulated_db");
-    safeStorage.setItem("mpr_simulated_db_version", MOCK_DB_VERSION);
-    safeStorage.setItem("mpr_simulated_db", JSON.stringify(INITIAL_MOCK_DB));
-    memoryDBFallback = JSON.parse(JSON.stringify(INITIAL_MOCK_DB));
-    return memoryDBFallback;
-  }
-
-  const existing = safeStorage.getItem("mpr_simulated_db");
-  if (existing) {
-    try {
-      return JSON.parse(existing);
-    } catch {
-      // corrupted, reset
-    }
-  }
-  
+  // 1. If we have an in-memory state from this session, always use it (fastest, always up-to-date)
   if (memoryDBFallback) {
     return memoryDBFallback;
   }
+
+  // 2. Check version — if stale, wipe everything and start fresh
+  const storedVersion = safeStorage.getItem("mpr_simulated_db_version");
+  if (storedVersion !== MOCK_DB_VERSION) {
+    console.log(`[MOCK DB] Version mismatch (stored: ${storedVersion}, expected: ${MOCK_DB_VERSION}). Resetting.`);
+    safeStorage.removeItem("mpr_simulated_db");
+    safeStorage.setItem("mpr_simulated_db_version", MOCK_DB_VERSION);
+    const freshDB = JSON.parse(JSON.stringify(INITIAL_MOCK_DB));
+    safeStorage.setItem("mpr_simulated_db", JSON.stringify(freshDB));
+    memoryDBFallback = freshDB;
+    return memoryDBFallback;
+  }
+
+  // 3. Try loading from localStorage
+  const existing = safeStorage.getItem("mpr_simulated_db");
+  if (existing) {
+    try {
+      memoryDBFallback = JSON.parse(existing);
+      return memoryDBFallback;
+    } catch {
+      // corrupted
+    }
+  }
   
-  safeStorage.setItem("mpr_simulated_db", JSON.stringify(INITIAL_MOCK_DB));
-  memoryDBFallback = JSON.parse(JSON.stringify(INITIAL_MOCK_DB));
+  // 4. Fallback: fresh DB
+  const freshDB = JSON.parse(JSON.stringify(INITIAL_MOCK_DB));
+  safeStorage.setItem("mpr_simulated_db", JSON.stringify(freshDB));
+  memoryDBFallback = freshDB;
   return memoryDBFallback;
 };
 
 const saveLocalMockDB = (db: any) => {
-  safeStorage.setItem("mpr_simulated_db", JSON.stringify(db));
+  // Always update in-memory first (this is the source of truth)
   memoryDBFallback = db;
+  // Then try to persist to localStorage (may silently fail on quota exceeded)
+  safeStorage.setItem("mpr_simulated_db", JSON.stringify(db));
 };
 
 // Check if we should override/simulate. By default, if window.location.hostname is vercel, or if we cannot reach /api/auth/login.
