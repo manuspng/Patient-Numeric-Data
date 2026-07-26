@@ -2337,14 +2337,29 @@ app.post("/api/admin/hospitals/delete", (req, res) => {
 // GET all custom master lists
 app.get("/api/admin/masters", (req, res) => {
   const db = loadDB();
+  const hospitals = db.hospitals || [];
+
+  const locsFromHosp = hospitals.map((h: any) => h.location).filter(Boolean);
+  const blocksFromHosp = hospitals.map((h: any) => h.block).filter(Boolean);
+  const distsFromHosp = hospitals.map((h: any) => h.district).filter(Boolean);
+  const typesFromHosp = hospitals.map((h: any) => h.type).filter(Boolean);
+  const catsFromHosp = hospitals.map((h: any) => h.category).filter(Boolean);
+  const emailsFromHosp = hospitals.map((h: any) => h.contactEmail).filter(Boolean);
+  const streamsFromHosp = hospitals.map((h: any) => h.stream).filter(Boolean);
+
+  const mergeUnique = (customList: string[] = [], dynamicList: string[] = []) => {
+    const combined = [...(customList || []), ...(dynamicList || [])];
+    return Array.from(new Set(combined.map(x => String(x).trim()).filter(Boolean)));
+  };
+
   res.json({
-    hospitalTypes: db.hospitalTypes || [],
-    streams: db.streams || [],
-    locations: db.locations || [],
-    blocks: db.blocks || [],
-    districts: db.districts || [],
-    emailIds: db.emailIds || [],
-    categories: db.categories || []
+    hospitalTypes: mergeUnique(db.hospitalTypes || [], typesFromHosp),
+    streams: mergeUnique(db.streams || [], streamsFromHosp),
+    locations: mergeUnique(db.locations || [], locsFromHosp),
+    blocks: mergeUnique(db.blocks || [], blocksFromHosp),
+    districts: mergeUnique(db.districts || [], distsFromHosp),
+    emailIds: mergeUnique(db.emailIds || [], emailsFromHosp),
+    categories: mergeUnique(db.categories || [], catsFromHosp)
   });
 });
 

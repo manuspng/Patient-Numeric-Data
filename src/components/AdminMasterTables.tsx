@@ -140,6 +140,43 @@ const getFacilityTypeAbbreviation = (typeStr: string): string => {
   return "SAD";
 };
 
+const sortEmailsByMatchingAlias = (emailList: string[], locationName: string, hospName: string): string[] => {
+  if (!emailList || emailList.length === 0) return [];
+
+  const locEng = (locationToEnglish[locationName] || locationName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const locHindi = (locationName || "").toLowerCase().replace(/[\s_-]/g, "");
+  const cleanHospName = (hospName || "").toLowerCase().replace(/[\s_-]/g, "");
+
+  const uniqueEmails = Array.from(new Set(emailList.filter(Boolean)));
+
+  return uniqueEmails.sort((a, b) => {
+    const aliasA = a.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+    const aliasB = b.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    const getScore = (alias: string) => {
+      let score = 0;
+      if (locEng && locEng.length >= 2) {
+        if (alias === locEng) score += 100;
+        else if (alias.startsWith(locEng) || locEng.startsWith(alias)) score += 80;
+        else if (alias.includes(locEng) || locEng.includes(alias)) score += 60;
+        else {
+          const sub = locEng.substring(0, Math.min(4, locEng.length));
+          if (sub.length >= 2 && alias.includes(sub)) score += 30;
+        }
+      }
+      if (locHindi && locHindi.length >= 2) {
+        if (alias.includes(locHindi)) score += 50;
+      }
+      if (cleanHospName && cleanHospName.length >= 2) {
+        if (alias.includes(cleanHospName) || cleanHospName.includes(alias)) score += 20;
+      }
+      return score;
+    };
+
+    return getScore(aliasB) - getScore(aliasA);
+  });
+};
+
 export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdate }: AdminMasterTablesProps) {
   const ct = getComponentTheme(user.role);
   const [usersList, setUsersList] = useState<UserProfile[]>([]);
@@ -997,6 +1034,21 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
         if (matchedByLoc.incharge) {
           syncedIncharge = matchedByLoc.incharge.trim();
         }
+      }
+    }
+
+    if (!syncedEmail && hospLocation) {
+      const allAvailableEmails = [
+        ...(masters?.emailIds || []),
+        ...hospitals.map(h => h.contactEmail).filter(Boolean)
+      ];
+      const sortedEmails = sortEmailsByMatchingAlias(allAvailableEmails, hospLocation, computedName);
+      if (sortedEmails.length > 0) {
+        let topEmail = sortedEmails[0];
+        if (topEmail.endsWith("@uttarakhandayurved.co.in")) {
+          topEmail = topEmail.replace("@uttarakhandayurved.co.in", "");
+        }
+        syncedEmail = topEmail;
       }
     }
 
@@ -1861,22 +1913,57 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Official Email Prefix / Login ID (ईमेल आईडी)*</label>
-                  <div className="flex rounded-lg border border-slate-200 overflow-hidden bg-white focus-within:ring-2 focus-within:ring-emerald-500/20 transition-colors">
-                    <input
-                      type="text"
-                      required
-                      id="hospital-email-input"
-                      placeholder="e.g. jhankat.ayush"
-                      value={hospEmail}
-                      onChange={(e) => setHospEmail(e.target.value)}
-                      className="w-full bg-transparent px-3 py-1.5 text-xs text-slate-805 font-mono font-bold outline-none"
-                    />
-                    {!hospEmail.includes("@") && (
-                      <span className="flex items-center bg-slate-50 px-2.5 border-l border-slate-150 text-[10px] text-emerald-800 font-bold select-none whitespace-nowrap">
-                        @uttarakhandayurved.co.in
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Official Email Prefix / Login ID (ईमेल आईडी)*</label>
+                    {hospLocation && (
+                      <span className="text-[9px] text-emerald-700 font-extrabold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                        🎯 Matched for {hospLocation}
                       </span>
                     )}
+                  </div>
+                  <div className="space-y-1.5">
+                    {/* Quick selector dropdown for synced emails sorted by matching alias */}
+                    {((masters?.emailIds && masters.emailIds.length > 0) || hospitals.length > 0) && (
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            let selectedVal = e.target.value;
+                            if (selectedVal.endsWith("@uttarakhandayurved.co.in")) {
+                              selectedVal = selectedVal.replace("@uttarakhandayurved.co.in", "");
+                            }
+                            setHospEmail(selectedVal);
+                          }
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] font-mono font-bold text-slate-700 outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                      >
+                        <option value="">-- Choose from Synced Google Sheet Emails (Location Sorted) --</option>
+                        {sortEmailsByMatchingAlias([
+                          ...(masters?.emailIds || []),
+                          ...hospitals.map(h => h.contactEmail).filter(Boolean)
+                        ], hospLocation, hospName).map((em, idx) => (
+                          <option key={idx} value={em}>
+                            {em} {idx === 0 && hospLocation ? "⭐ (Best Match for " + hospLocation + ")" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
+                    <div className="flex rounded-lg border border-slate-200 overflow-hidden bg-white focus-within:ring-2 focus-within:ring-emerald-500/20 transition-colors">
+                      <input
+                        type="text"
+                        required
+                        id="hospital-email-input"
+                        placeholder="e.g. jhankat.ayush"
+                        value={hospEmail}
+                        onChange={(e) => setHospEmail(e.target.value)}
+                        className="w-full bg-transparent px-3 py-1.5 text-xs text-slate-805 font-mono font-bold outline-none"
+                      />
+                      {!hospEmail.includes("@") && (
+                        <span className="flex items-center bg-slate-50 px-2.5 border-l border-slate-150 text-[10px] text-emerald-800 font-bold select-none whitespace-nowrap">
+                          @uttarakhandayurved.co.in
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {!hospEmail.includes("@") && hospEmail.trim().length > 0 && (
                     <p className="text-[9px] text-slate-400 mt-1 font-semibold">
@@ -1884,7 +1971,7 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
                     </p>
                   )}
                   <span className="text-[9px] text-emerald-600 mt-1 block font-semibold flex items-center gap-1">
-                    ✨ Auto-fetched and synced based on selected Location. You can also edit it.
+                    ✨ Dynamically matched & synced from Google Sheet based on Location ({hospLocation || "selected facility"}).
                   </span>
                 </div>
 

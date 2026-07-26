@@ -434,14 +434,29 @@ const customFetch = async function (input: any, init?: any) {
         responseData = db.registrationRequests || [];
       }
       else if (pathname === "/api/admin/masters") {
+        const hospitals = db.hospitals || [];
+
+        const locsFromHosp = hospitals.map((h: any) => h.location).filter(Boolean);
+        const blocksFromHosp = hospitals.map((h: any) => h.block).filter(Boolean);
+        const distsFromHosp = hospitals.map((h: any) => h.district).filter(Boolean);
+        const typesFromHosp = hospitals.map((h: any) => h.type).filter(Boolean);
+        const catsFromHosp = hospitals.map((h: any) => h.category).filter(Boolean);
+        const emailsFromHosp = hospitals.map((h: any) => h.contactEmail).filter(Boolean);
+        const streamsFromHosp = hospitals.map((h: any) => h.stream).filter(Boolean);
+
+        const mergeUnique = (customList: string[] = [], dynamicList: string[] = []) => {
+          const combined = [...(customList || []), ...(dynamicList || [])];
+          return Array.from(new Set(combined.map(x => String(x).trim()).filter(Boolean)));
+        };
+
         responseData = {
-          hospitalTypes: db.hospitalTypes || INITIAL_MOCK_DB.hospitalTypes || [],
-          streams: db.streams || INITIAL_MOCK_DB.streams || [],
-          locations: db.locations || INITIAL_MOCK_DB.locations || [],
-          blocks: db.blocks || INITIAL_MOCK_DB.blocks || [],
-          districts: db.districts || INITIAL_MOCK_DB.districts || [],
-          emailIds: db.emailIds || INITIAL_MOCK_DB.emailIds || [],
-          categories: db.categories || INITIAL_MOCK_DB.categories || []
+          hospitalTypes: mergeUnique(db.hospitalTypes || INITIAL_MOCK_DB.hospitalTypes, typesFromHosp),
+          streams: mergeUnique(db.streams || INITIAL_MOCK_DB.streams, streamsFromHosp),
+          locations: mergeUnique(db.locations || INITIAL_MOCK_DB.locations, locsFromHosp),
+          blocks: mergeUnique(db.blocks || INITIAL_MOCK_DB.blocks, blocksFromHosp),
+          districts: mergeUnique(db.districts || INITIAL_MOCK_DB.districts, distsFromHosp),
+          emailIds: mergeUnique(db.emailIds || INITIAL_MOCK_DB.emailIds, emailsFromHosp),
+          categories: mergeUnique(db.categories || INITIAL_MOCK_DB.categories, catsFromHosp)
         };
       }
       else if (pathname === "/api/admin/masters/update") {
