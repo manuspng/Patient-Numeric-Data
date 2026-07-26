@@ -229,6 +229,123 @@ const saveLocalMockDB = (db: any) => {
 // Check if we should override/simulate. By default, if window.location.hostname is vercel, or if we cannot reach /api/auth/login.
 let forceMockBackend = window.location.hostname.endsWith(".vercel.app") || window.location.hostname.includes("vercel");
 
+const parseGoogleSheetCsv = (csvText: string) => {
+  const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== "");
+  if (lines.length < 2) return { hospitals: [], masters: { locations: [], blocks: [], districts: [], emailIds: [], categories: [], hospitalTypes: [], streams: [] } };
+
+  const parseCsvLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  };
+
+  const headers = parseCsvLine(lines[0]);
+  const rows = lines.slice(1).map(line => parseCsvLine(line));
+
+  const findColIdx = (keywords: string[]) => {
+    return headers.findIndex(h => {
+      const cleanH = h.toLowerCase().replace(/[\s_-]/g, "");
+      return keywords.some(k => {
+        const cleanK = k.toLowerCase().replace(/[\s_-]/g, "");
+        return cleanH.includes(cleanK) || cleanK.includes(cleanH);
+      });
+    });
+  };
+
+  const colCat = findColIdx(["facilityname", "category", "name", "चिकित्सालय", "नाम", "facility name/category"]);
+  const colLoc = findColIdx(["location", "locationname", "city", "village", "स्थान"]);
+  const colBlock = findColIdx(["block", "blocks", "विकासखंड"]);
+  const colDist = findColIdx(["district", "districts", "जनपद"]);
+  const colEmail = findColIdx(["email", "officialemail", "contactemail", "ईमेल", "mail", "official email id"]);
+  const colSystem = findColIdx(["system", "ayushsystem", "ayush", "विधा", "stream"]);
+  const colType = findColIdx(["facilitytype", "type", "प्रकार", "hospcode", "facility type"]);
+
+  const extractedLocations: string[] = [];
+  const extractedBlocks: string[] = [];
+  const extractedDistricts: string[] = [];
+  const extractedEmails: string[] = [];
+  const extractedCategories: string[] = [];
+  const extractedTypes: string[] = [];
+  const extractedStreams: string[] = [];
+
+  const parsedHospitals: any[] = [];
+
+  rows.forEach((row, idx) => {
+    const catVal = colCat !== -1 && row[colCat] ? row[colCat] : "";
+    const locVal = colLoc !== -1 && row[colLoc] ? row[colLoc] : "";
+    const blockVal = colBlock !== -1 && row[colBlock] ? row[colBlock] : "";
+    const distVal = colDist !== -1 && row[colDist] ? row[colDist] : "";
+    const emailVal = colEmail !== -1 && row[colEmail] ? row[colEmail] : "";
+    const sysVal = colSystem !== -1 && row[colSystem] ? row[colSystem] : "";
+    const typeVal = colType !== -1 && row[colType] ? row[colType] : "";
+
+    if (locVal) extractedLocations.push(locVal);
+    if (blockVal) extractedBlocks.push(blockVal);
+    if (distVal) extractedDistricts.push(distVal);
+    if (emailVal) extractedEmails.push(emailVal);
+    if (catVal) extractedCategories.push(catVal);
+    if (typeVal) extractedTypes.push(typeVal);
+    if (sysVal) extractedStreams.push(sysVal);
+
+    if (locVal || catVal) {
+      const categoryStr = catVal || typeVal || "SAD";
+      let compName = categoryStr;
+      if (categoryStr && locVal) {
+        if (categoryStr.toLowerCase().includes(locVal.toLowerCase())) {
+          compName = categoryStr;
+        } else {
+          compName = `${categoryStr} - ${locVal}`;
+        }
+      } else if (locVal) {
+        compName = locVal;
+      }
+
+      parsedHospitals.push({
+        id: `hosp-${idx + 1}-${Math.random().toString(36).substring(2, 7)}`,
+        name: compName,
+        code: typeVal ? `${typeVal}-${(idx + 1).toString().padStart(3, '0')}` : `AYUSH-${100 + idx}`,
+        type: typeVal || categoryStr || "SAD",
+        category: categoryStr,
+        address: `${locVal}${blockVal ? ', ' + blockVal : ''}`,
+        contactEmail: emailVal,
+        contactPhone: "",
+        isActive: true,
+        stream: sysVal || "Ayurved",
+        location: locVal,
+        block: blockVal,
+        district: distVal || "उधम सिंह नगर",
+        incharge: ""
+      });
+    }
+  });
+
+  return {
+    hospitals: parsedHospitals,
+    masters: {
+      locations: Array.from(new Set(extractedLocations.filter(Boolean))),
+      blocks: Array.from(new Set(extractedBlocks.filter(Boolean))),
+      districts: Array.from(new Set(extractedDistricts.filter(Boolean))),
+      emailIds: Array.from(new Set(extractedEmails.filter(Boolean))),
+      categories: Array.from(new Set(extractedCategories.filter(Boolean))),
+      hospitalTypes: Array.from(new Set(extractedTypes.filter(Boolean))),
+      streams: Array.from(new Set(extractedStreams.filter(Boolean)))
+    }
+  };
+};
+
 const originalFetch = window.fetch;
 const customFetch = async function (input: any, init?: any) {
   let urlStr = "";
@@ -1061,7 +1178,82 @@ const customFetch = async function (input: any, init?: any) {
         }
       }
       else if (pathname === "/api/admin/hospitals/sync-sheets") {
-        responseData = { success: true, message: "Sync bypassed in local simulation" };
+        const { url, previewOnly } = body || {};
+        if (!url) {
+          responseData = { success: false, message: "Google Sheet URL is required" };
+        } else {
+          try {
+            const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+            if (!match) {
+              responseData = { success: false, message: "Invalid Google Sheet URL format. Make sure it contains '/spreadsheets/d/{id}'" };
+            } else {
+              const spreadsheetId = match[1];
+              const gidMatch = url.match(/[?&]gid=([0-9]+)/);
+              const gid = gidMatch ? gidMatch[1] : "";
+              let csvUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&t=${Date.now()}`;
+              if (gid) {
+                csvUrl += `&gid=${gid}`;
+              }
+
+              const response = await originalFetch(csvUrl);
+              const csvText = await response.text();
+              const parsed = parseGoogleSheetCsv(csvText);
+
+              if (previewOnly) {
+                responseData = { success: true, hospitals: parsed.hospitals, masters: parsed.masters };
+              } else {
+                // Merge extracted masters into db
+                const mergeArr = (existing: string[] = [], newItems: string[] = []) => {
+                  return Array.from(new Set([...(existing || []), ...(newItems || [])])).filter(Boolean);
+                };
+
+                db.locations = mergeArr(db.locations, parsed.masters.locations);
+                db.blocks = mergeArr(db.blocks, parsed.masters.blocks);
+                db.districts = mergeArr(db.districts, parsed.masters.districts);
+                db.emailIds = mergeArr(db.emailIds, parsed.masters.emailIds);
+                db.categories = mergeArr(db.categories, parsed.masters.categories);
+                db.hospitalTypes = mergeArr(db.hospitalTypes, parsed.masters.hospitalTypes);
+                db.streams = mergeArr(db.streams, parsed.masters.streams);
+
+                if (parsed.hospitals.length > 0) {
+                  // Merge hospitals by code or location
+                  parsed.hospitals.forEach((newHosp: any) => {
+                    const existingIdx = db.hospitals.findIndex((h: any) => 
+                      (h.code && h.code === newHosp.code) || 
+                      (h.name && h.name.toLowerCase() === newHosp.name.toLowerCase()) ||
+                      (h.location && newHosp.location && h.location.toLowerCase() === newHosp.location.toLowerCase())
+                    );
+                    if (existingIdx !== -1) {
+                      db.hospitals[existingIdx] = {
+                        ...db.hospitals[existingIdx],
+                        ...newHosp,
+                        id: db.hospitals[existingIdx].id
+                      };
+                    } else {
+                      db.hospitals.push(newHosp);
+                    }
+                  });
+                }
+
+                saveLocalMockDB(db);
+
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent("masters-updated"));
+                  window.dispatchEvent(new CustomEvent("hospitals-updated"));
+                }, 100);
+
+                responseData = { 
+                  success: true, 
+                  message: `Successfully synced ${parsed.masters.locations.length} locations, ${parsed.masters.emailIds.length} email IDs, and ${parsed.hospitals.length} entries from Google Sheet!`, 
+                  hospitals: db.hospitals 
+                };
+              }
+            }
+          } catch (syncErr: any) {
+            console.error("Sheet sync error in client simulation:", syncErr);
+            responseData = { success: false, message: `Sync failed: ${syncErr?.message || "Could not fetch Google Sheet."}` };
+          }
+        }
       }
       else if (pathname === "/api/mpr/check-anomalies") {
         responseData = { hasAnomalies: false, flags: [] };
