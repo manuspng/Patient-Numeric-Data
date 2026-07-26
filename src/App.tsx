@@ -167,13 +167,57 @@ const INITIAL_MOCK_DB = {
   ],
   customTemplates: [] as any[],
   registrationRequests: [] as any[],
-  hospitalTypes: ["राजकीय आयुर्वेदिक चिकित्सालय", "राजकीय यूनानी चिकित्सालय", "आयुष्मान आरोग्य मंदिर"],
+  hospitalTypes: [
+    "राजकीय आयुर्वेदिक चिकित्सालय",
+    "राजकीय यूनानी चिकित्सालय",
+    "आयुष विंग( पुरुष ) जिला चिकित्सालय",
+    "आयुष विंग( महिला ) जिला चिकित्सालय",
+    "आयुष्मान आरोग्य मंदिर",
+    "अति प्राथमिक स्वास्थ केंद्र - आयुष विंग (MOCH)"
+  ],
   streams: ["Ayurved", "Unani"],
-  locations: ["बाजपुर", "खटीमा", "सितारगंज", "जसपुर"],
-  blocks: ["बाजपुर", "गदरपुर", "जसपुर", "खटीमा", "सितारगंज"],
+  locations: [
+    "बाजपुर", "बन्नाखेड़ा", "बरा", "बेरिया दौलतपुर", "भिटौरा", "बिडौरा", "चकरपुर", "ढकिया", "धनौरी", "दिनेशपुर", 
+    "दिउरी", "गदरपुर", "गूलरभोज", "हरिपुरा हसन", "जसपुर", "झनकट", "रुद्रपुर", "केलाखेड़ा", "खानपुर पश्चिम", "खटीमा", 
+    "किच्छा", "लालपुर", "महुआ डबरा", "महुआ खेड़ा गंज", "मैनाजुंडी", "मझोला", "मसीत", "मोहनपुर", "नादेही", "नागलतराई", 
+    "नगर रुद्रपुर", "नारायणपुर", "परमानदपुर", "पतरामपुर", "प्रतापपुर", "राम नगर वन", "शक्ति फ़ार्म", "सितारगंज", "स्केनिया", 
+    "श्रीपुर बिचवा", "सुल्तानपुर पट्टी"
+  ],
+  blocks: ["रुद्रपुर", "खटीमा", "काशीपुर", "सितारगंज", "बाजपुर", "जसपुर", "गदरपुर"],
   districts: ["उधम सिंह नगर"],
-  emailIds: [] as string[],
-  categories: [] as string[]
+  emailIds: [
+    "usn.nagarrudrapur@uttarakhandayurved.co.in",
+    "usn.chakarpur@uttarakhandayurved.co.in",
+    "usn.pratappur@uttarakhandayurved.co.in",
+    "usn.jhankat@uttarakhandayurved.co.in",
+    "usn.dhanauri@uttarakhandayurved.co.in",
+    "usn.shripuravichwa@uttarakhandayurved.co.in",
+    "usn.bhitora@uttarakhandayurved.co.in",
+    "usn.vidaura@uttarakhandayurved.co.in",
+    "usn.sultanpurpattiunani@uttarakhandayurved.co.in",
+    "usn.dhawmale@uttarakhandayurved.co.in",
+    "usn.dhawfemale@uttarakhandayurved.co.in",
+    "usn.mahuakhedaganj.aam@uttarakhandayurved.co.in",
+    "usn.ramnagarbanka.aam@uttrakhandayurved.co.in",
+    "usn.majhola.aam@uttarakhandayurved.co.in",
+    "usn.mahuadabra.aam@uttarakhandayurved.co.in",
+    "usn.nadehi.aam@uttarakhandayurved.co.in",
+    "usn.maseet.aam@uttarakhandayurved.co.in",
+    "usn.khanpurpashchim.aam@uttarakhandayurved.co.in",
+    "usn.lalpur.aam@uttarakhandayurved.co.in",
+    "usn.bara.aam@uttarakhandayurved.co.in",
+    "usn.jaspur.aam@uttarakhandayurved.co.in",
+    "dauo.usnagar@uttarakhandayurved.co.in"
+  ],
+  categories: [
+    "SAD",
+    "SUD",
+    "Ayush Wingh",
+    "AAM",
+    "MOCH",
+    "Sub-District Hospital",
+    "District Hospital"
+  ]
 };
 
 // No pre-seeded mock reports — Proformas will only show data the user actually submits
@@ -181,15 +225,23 @@ const INITIAL_MOCK_DB = {
 
 let memoryDBFallback: any = null;
 
-const MOCK_DB_VERSION = "v6-single-hospital-fix-fields";
+const MOCK_DB_VERSION = "v7-full-google-sheets-master-sync";
 
 const getLocalMockDB = () => {
-  // 1. If we have an in-memory state from this session, always use it (fastest, always up-to-date)
+  // 1. If we have an in-memory state from this session, always use it
   if (memoryDBFallback) {
+    const mergeArr = (custom: string[] = [], init: string[] = []) => Array.from(new Set([...(custom || []), ...(init || [])])).filter(Boolean);
+    memoryDBFallback.categories = mergeArr(memoryDBFallback.categories, INITIAL_MOCK_DB.categories);
+    memoryDBFallback.hospitalTypes = mergeArr(memoryDBFallback.hospitalTypes, INITIAL_MOCK_DB.hospitalTypes);
+    memoryDBFallback.locations = mergeArr(memoryDBFallback.locations, INITIAL_MOCK_DB.locations);
+    memoryDBFallback.blocks = mergeArr(memoryDBFallback.blocks, INITIAL_MOCK_DB.blocks);
+    memoryDBFallback.districts = mergeArr(memoryDBFallback.districts, INITIAL_MOCK_DB.districts);
+    memoryDBFallback.emailIds = mergeArr(memoryDBFallback.emailIds, INITIAL_MOCK_DB.emailIds);
+    memoryDBFallback.streams = mergeArr(memoryDBFallback.streams, INITIAL_MOCK_DB.streams);
     return memoryDBFallback;
   }
 
-  // 2. Check version — if stale, wipe everything and start fresh
+  // 2. Check version — if stale, reset
   const storedVersion = safeStorage.getItem("mpr_simulated_db_version");
   if (storedVersion !== MOCK_DB_VERSION) {
     console.log(`[MOCK DB] Version mismatch (stored: ${storedVersion}, expected: ${MOCK_DB_VERSION}). Resetting.`);
@@ -206,6 +258,16 @@ const getLocalMockDB = () => {
   if (existing) {
     try {
       memoryDBFallback = JSON.parse(existing);
+      const mergeArr = (custom: string[] = [], init: string[] = []) => Array.from(new Set([...(custom || []), ...(init || [])])).filter(Boolean);
+      memoryDBFallback.categories = mergeArr(memoryDBFallback.categories, INITIAL_MOCK_DB.categories);
+      memoryDBFallback.hospitalTypes = mergeArr(memoryDBFallback.hospitalTypes, INITIAL_MOCK_DB.hospitalTypes);
+      memoryDBFallback.locations = mergeArr(memoryDBFallback.locations, INITIAL_MOCK_DB.locations);
+      memoryDBFallback.blocks = mergeArr(memoryDBFallback.blocks, INITIAL_MOCK_DB.blocks);
+      memoryDBFallback.districts = mergeArr(memoryDBFallback.districts, INITIAL_MOCK_DB.districts);
+      memoryDBFallback.emailIds = mergeArr(memoryDBFallback.emailIds, INITIAL_MOCK_DB.emailIds);
+      memoryDBFallback.streams = mergeArr(memoryDBFallback.streams, INITIAL_MOCK_DB.streams);
+      
+      saveLocalMockDB(memoryDBFallback);
       return memoryDBFallback;
     } catch {
       // corrupted
