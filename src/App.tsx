@@ -2801,22 +2801,6 @@ export default function App() {
                       user={user}
                       onSuccessToast={showToast}
                     />
-                    <FacilitySettings
-                      user={user}
-                      hospitalId={activeHospital?.id || hospital?.id || "hosp-assigned"}
-                      hospitalName={activeHospital?.name || hospital?.name || "Assigned Ayurvedic Hospital"}
-                      onSuccessToast={showToast}
-                      onProfileUpdate={(updatedUser) => {
-                        setUser(updatedUser);
-                        safeStorage.setItem("mpr_user", JSON.stringify(updatedUser));
-                      }}
-                      hasIpd={hasIpd}
-                      setHasIpd={setHasIpd}
-                      hasPanchkarma={hasPanchkarma}
-                      setHasPanchkarma={setHasPanchkarma}
-                      alwaysAllowInventoryEdit={alwaysAllowInventoryEdit}
-                      setAlwaysAllowInventoryEdit={setAlwaysAllowInventoryEdit}
-                    />
                   </div>
                 ) : (
                   <div className={activeTab === "settings" ? "block" : "hidden"}>
