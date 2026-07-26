@@ -917,8 +917,84 @@ const customFetch = async function (input: any, init?: any) {
           diseaseTotals: Object.values(districtDiseaseTotals)
         };
 
+        const selectedCategory = parsedUrl.searchParams.get("category") || "";
         let responseHospitals = hospitalAggregates;
         let responseTotal = districtTotal;
+
+        if (selectedCategory && selectedCategory !== "all") {
+          responseHospitals = hospitalAggregates.filter((h: any) => {
+            const hospObj = activeHospitals.find((ah: any) => ah.id === h.hospitalId);
+            return getDynamicHospitalCategory(hospObj).toLowerCase() === selectedCategory.toLowerCase();
+          });
+          if (responseHospitals.length > 0) {
+            const catDiseaseTotals: Record<string, any> = {};
+            responseHospitals.forEach((h: any) => {
+              (h.diseaseTotals || []).forEach((dt: any) => {
+                if (!catDiseaseTotals[dt.nameHindi]) {
+                  catDiseaseTotals[dt.nameHindi] = { ...dt };
+                } else {
+                  catDiseaseTotals[dt.nameHindi].opd_male_new += dt.opd_male_new;
+                  catDiseaseTotals[dt.nameHindi].opd_male_old += dt.opd_male_old;
+                  catDiseaseTotals[dt.nameHindi].opd_female_new += dt.opd_female_new;
+                  catDiseaseTotals[dt.nameHindi].opd_female_old += dt.opd_female_old;
+                  catDiseaseTotals[dt.nameHindi].opd_child_new += dt.opd_child_new;
+                  catDiseaseTotals[dt.nameHindi].opd_child_old += dt.opd_child_old;
+                  catDiseaseTotals[dt.nameHindi].opd_total += dt.opd_total;
+                }
+              });
+            });
+
+            responseTotal = ({
+              hospitalId: "consolidated",
+              hospitalName: "जिला आयुर्वेदिक एवं यूनानी अधिकारी",
+              hospitalType: selectedCategory,
+              hospitalCode: "AYUSH-CATEGORY",
+              hospitalDistrict: "उधम सिंह नगर",
+              daysSubmitted: responseHospitals.reduce((s: number, h: any) => s + h.daysSubmitted, 0),
+              opd_male_new: responseHospitals.reduce((s: number, h: any) => s + h.opd_male_new, 0),
+              opd_male_old: responseHospitals.reduce((s: number, h: any) => s + h.opd_male_old, 0),
+              opd_female_new: responseHospitals.reduce((s: number, h: any) => s + h.opd_female_new, 0),
+              opd_female_old: responseHospitals.reduce((s: number, h: any) => s + h.opd_female_old, 0),
+              opd_child_new: responseHospitals.reduce((s: number, h: any) => s + h.opd_child_new, 0),
+              opd_child_old: responseHospitals.reduce((s: number, h: any) => s + h.opd_child_old, 0),
+              opd_elderly_new: responseHospitals.reduce((s: number, h: any) => s + h.opd_elderly_new, 0),
+              opd_elderly_old: responseHospitals.reduce((s: number, h: any) => s + h.opd_elderly_old, 0),
+              opd_total: responseHospitals.reduce((s: number, h: any) => s + h.opd_total, 0),
+              ipd_admissions: responseHospitals.reduce((s: number, h: any) => s + h.ipd_admissions, 0),
+              ipd_male_new: responseHospitals.reduce((s: number, h: any) => s + h.ipd_male_new, 0),
+              ipd_male_old: responseHospitals.reduce((s: number, h: any) => s + h.ipd_male_old, 0),
+              ipd_female_new: responseHospitals.reduce((s: number, h: any) => s + h.ipd_female_new, 0),
+              ipd_female_old: responseHospitals.reduce((s: number, h: any) => s + h.ipd_female_old, 0),
+              ipd_child_new: responseHospitals.reduce((s: number, h: any) => s + h.ipd_child_new, 0),
+              ipd_child_old: responseHospitals.reduce((s: number, h: any) => s + h.ipd_child_old, 0),
+              avg_bed_occupancy: responseHospitals.length > 0 ? Math.round(responseHospitals.reduce((s: number, h: any) => s + h.avg_bed_occupancy, 0) / responseHospitals.length) : 0,
+              panchkarma_male: responseHospitals.reduce((s: number, h: any) => s + h.panchkarma_male, 0),
+              panchkarma_female: responseHospitals.reduce((s: number, h: any) => s + h.panchkarma_female, 0),
+              panchkarma_child: responseHospitals.reduce((s: number, h: any) => s + h.panchkarma_child, 0),
+              panchkarma_elderly: responseHospitals.reduce((s: number, h: any) => s + h.panchkarma_elderly, 0),
+              panchkarma_total: responseHospitals.reduce((s: number, h: any) => s + h.panchkarma_total, 0),
+              hemoglobin: responseHospitals.reduce((s: number, h: any) => s + h.hemoglobin, 0),
+              blood_sugar: responseHospitals.reduce((s: number, h: any) => s + h.blood_sugar, 0),
+              urine_sugar: responseHospitals.reduce((s: number, h: any) => s + h.urine_sugar, 0),
+              urine_albumin: responseHospitals.reduce((s: number, h: any) => s + h.urine_albumin, 0),
+              malaria: responseHospitals.reduce((s: number, h: any) => s + h.malaria, 0),
+              dengue: responseHospitals.reduce((s: number, h: any) => s + h.dengue, 0),
+              typhoid: responseHospitals.reduce((s: number, h: any) => s + h.typhoid, 0),
+              hepatitis_a: responseHospitals.reduce((s: number, h: any) => s + h.hepatitis_a, 0),
+              hepatitis_b: responseHospitals.reduce((s: number, h: any) => s + h.hepatitis_b, 0),
+              hepatitis_c: responseHospitals.reduce((s: number, h: any) => s + h.hepatitis_c, 0),
+              pregnancy_tests: responseHospitals.reduce((s: number, h: any) => s + h.pregnancy_tests, 0),
+              total_tests: responseHospitals.reduce((s: number, h: any) => s + h.total_tests, 0),
+              camp_count: responseHospitals.reduce((s: number, h: any) => s + h.camp_count, 0),
+              camp_beneficiaries_total: responseHospitals.reduce((s: number, h: any) => s + h.camp_beneficiaries_total, 0),
+              camp_medicines_distributed: responseHospitals.reduce((s: number, h: any) => s + h.camp_medicines_distributed, 0),
+              camp_ncd_screenings: responseHospitals.reduce((s: number, h: any) => s + h.camp_ncd_screenings, 0),
+              camp_ayurvidya_sessions: responseHospitals.reduce((s: number, h: any) => s + h.camp_ayurvidya_sessions, 0),
+              camps: responseHospitals.reduce((acc: any[], h: any) => acc.concat(h.camps || []), []),
+              diseaseTotals: Object.values(catDiseaseTotals)
+            } as any);
+          }
+        }
 
         if (targetHospitalId) {
           responseHospitals = hospitalAggregates.filter((h: any) => 
@@ -2374,7 +2450,7 @@ export default function App() {
                     {user.role === UserRole.SUPER_ADMIN
                       ? "Super Admin"
                       : user.role === UserRole.DAUO
-                      ? "DAUO (District Admin)"
+                      ? "जिला आयुर्वेदिक एवं यूनानी अधिकारी - उधम सिंह नगर"
                       : (activeHospital?.name || hospital?.name || "")}
                   </h1>
                 </div>

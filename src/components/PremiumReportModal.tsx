@@ -35,6 +35,7 @@ export default function PremiumReportModal({
   // Modal and Fetch state
   const [selectedMonth, setSelectedMonth] = useState(initialMonth);
   const [reportType, setReportType] = useState<"proforma1" | "proforma2" | "camp" | "testkit" | "disease_graph">("proforma1");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [districtTotal, setDistrictTotal] = useState<any>(null);
   const [fetchedHospitals, setFetchedHospitals] = useState<any[]>([]);
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>("consolidated");
@@ -182,6 +183,9 @@ export default function PremiumReportModal({
         if (reportType === "proforma2") {
           url += `&isAnnual=true`;
         }
+        if (selectedCategory && selectedCategory !== "all") {
+          url += `&category=${encodeURIComponent(selectedCategory)}`;
+        }
         if (user.role === UserRole.HOSPITAL_USER && user.hospitalId) {
           url += `&hospitalId=${user.hospitalId}`;
         }
@@ -202,7 +206,7 @@ export default function PremiumReportModal({
     }
 
     fetchReportData();
-  }, [selectedMonth, user, isOpen, isPreviewMode, reportType, retryCount]);
+  }, [selectedMonth, user, isOpen, isPreviewMode, reportType, selectedCategory, retryCount]);
 
   if (!isOpen) return null;
 
@@ -249,7 +253,7 @@ export default function PremiumReportModal({
     : (user.role === UserRole.HOSPITAL_USER
         ? (hospitalData?.hospitalName || "राजकीय आयुर्वेदिक चिकित्सालय")
         : (selectedHospitalId === "consolidated"
-            ? "जिला आयुर्वेदिक एवं यूनानी अधिकारी - उधम सिंह नगर"
+            ? "जिला आयुर्वेदिक एवं यूनानी अधिकारी"
             : (hospitalData?.hospitalName || "राजकीय आयुर्वेदिक चिकित्सालय")));
   const hospitalCode = isPreviewMode ? "[AYUSH-CODE]" : (hospitalData?.hospitalCode || "AYUSH-DISTRICT");
   const hospitalType = isPreviewMode ? "[FACILITY TYPE]" : (hospitalData?.hospitalType || "Ayurvedic");
@@ -263,6 +267,16 @@ export default function PremiumReportModal({
         : (selectedHospitalId === "consolidated"
             ? ""
             : (hospitalData?.hospitalIncharge || "")));
+
+  const displayFullHeaderTitle = (() => {
+    if (isPreviewMode) return "[HOSPITAL NAME PLACEHOLDER] - ऊधम सिंह नगर";
+    const nameStr = hospitalName.trim();
+    const distStr = hospitalDistrict.trim();
+    if (nameStr.toLowerCase().includes(distStr.toLowerCase()) || nameStr.includes("उधम सिंह नगर") || nameStr.includes("ऊधम सिंह नगर")) {
+      return nameStr;
+    }
+    return `${nameStr} - ${distStr}`;
+  })();
 
   // Trigger Print for ONLY the report area
   const handlePrint = () => {
@@ -576,9 +590,7 @@ export default function PremiumReportModal({
             {/* Spreadsheet Title Block */}
             <div className="text-center pb-1 -mt-[26px]">
               <div className="text-[13px] h-[40px] font-black tracking-tight text-slate-950 uppercase p-1.5 bg-white flex items-center justify-center gap-2 mt-[20px]">
-                <span className="text-emerald-950">{hospitalName}</span>
-                <span>-</span>
-                <span>{hospitalDistrict}</span>
+                <span className="text-emerald-950">{displayFullHeaderTitle}</span>
               </div>
               <div className="text-[13px] h-[24px] font-extrabold mt-0.5 text-slate-800 p-0.5 bg-white flex items-center justify-center">
                 Monthly Patient Report - {monthEnglish} {year}
@@ -942,9 +954,7 @@ export default function PremiumReportModal({
             {/* Spreadsheet Title Block */}
             <div className="text-center pb-1 -mt-[26px]">
               <div className="text-[13px] h-[40px] font-black tracking-tight text-slate-950 uppercase p-1.5 bg-white flex items-center justify-center gap-2 mt-[20px]">
-                <span className="text-emerald-950">{hospitalName}</span>
-                <span>-</span>
-                <span>{hospitalDistrict}</span>
+                <span className="text-emerald-950">{displayFullHeaderTitle}</span>
               </div>
               <div className="text-[13px] h-[24px] font-extrabold mt-0.5 text-slate-800 p-0.5 bg-white flex items-center justify-center">
                 Annual Patient Report (APR) - Financial Year {fyString}
@@ -1642,7 +1652,26 @@ export default function PremiumReportModal({
                 </div>
               )}
 
-              {/* Hospital filter if Super Admin or Office Admin */}
+              {/* Category filter for Super Admin or DAUO */}
+              {(user.role === UserRole.SUPER_ADMIN || user.role === UserRole.DAUO) && (
+                <div className="flex-1 lg:flex-initial flex items-center justify-between lg:justify-start gap-1 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-xs">
+                  <span className="text-[10px] uppercase font-bold text-emerald-800">Category:</span>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="bg-transparent text-xs font-extrabold text-slate-850 outline-none border-none py-0.5 cursor-pointer max-w-[130px]"
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="SAD">SAD (आयुर्वेदिक)</option>
+                    <option value="SUD">SUD (यूनानी)</option>
+                    <option value="Ayush Wingh">Ayush Wing (आयुष विंग)</option>
+                    <option value="AAM">AAM (आरोग्य मंदिर)</option>
+                    <option value="MOCH">MOCH</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Hospital filter if Super Admin or DAUO */}
               {user.role !== UserRole.HOSPITAL_USER && fetchedHospitals.length > 0 && (
                 <div className="flex-1 lg:flex-initial flex items-center justify-between lg:justify-start gap-1 bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 shadow-xs">
                   <span className="text-[10px] uppercase font-bold text-slate-400">Facility:</span>
