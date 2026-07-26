@@ -40,6 +40,7 @@ import { UserRole, UserProfile, Hospital } from "../types";
 interface AdminMasterTablesProps {
   user: UserProfile;
   onSuccessToast: (receipt: { title: string; content: string }) => void;
+  onProfileUpdate?: (updatedUser: UserProfile) => void;
 }
 
 const locationToEnglish: Record<string, string> = {
@@ -139,7 +140,7 @@ const getFacilityTypeAbbreviation = (typeStr: string): string => {
   return "SAD";
 };
 
-export default function AdminMasterTables({ user, onSuccessToast }: AdminMasterTablesProps) {
+export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdate }: AdminMasterTablesProps) {
   const ct = getComponentTheme(user.role);
   const [usersList, setUsersList] = useState<UserProfile[]>([]);
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
@@ -151,6 +152,52 @@ export default function AdminMasterTables({ user, onSuccessToast }: AdminMasterT
   const [bulkPastedData, setBulkPastedData] = useState("");
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
   const [isBulkSaving, setIsBulkSaving] = useState(false);
+
+  // Super Admin Profile Details state
+  const [adminProfileName, setAdminProfileName] = useState(user.name || "");
+  const [adminProfileDesignation, setAdminProfileDesignation] = useState(user.designation || "Super Admin");
+  const [adminProfileContact, setAdminProfileContact] = useState(user.phone || user.contact || "");
+  const [isSavingAdminProfile, setIsSavingAdminProfile] = useState(false);
+
+  useEffect(() => {
+    setAdminProfileName(user.name || "");
+    setAdminProfileDesignation(user.designation || "Super Admin");
+    setAdminProfileContact(user.phone || user.contact || "");
+  }, [user]);
+
+  const handleSaveAdminProfile = async () => {
+    setIsSavingAdminProfile(true);
+    try {
+      const res = await fetch("/api/admin/profile/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          name: adminProfileName,
+          designation: adminProfileDesignation,
+          phone: adminProfileContact,
+          contact: adminProfileContact
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        onSuccessToast({
+          title: "Profile Updated",
+          content: "Super Admin profile details updated successfully!"
+        });
+        if (onProfileUpdate && data.user) {
+          onProfileUpdate(data.user);
+        }
+      } else {
+        alert(data.message || "Failed to update profile details");
+      }
+    } catch (e) {
+      console.error("Profile save error:", e);
+      alert("An error occurred while updating profile.");
+    } finally {
+      setIsSavingAdminProfile(false);
+    }
+  };
 
   // Master lists and configuration state
   const [masterDiseases, setMasterDiseases] = useState<any[]>([]);
@@ -1244,6 +1291,74 @@ export default function AdminMasterTables({ user, onSuccessToast }: AdminMasterT
         {/* TABS: WHITELIST USERS */}
         {activeTab === "users" && (
           <div className="space-y-6">
+            {/* SUPER ADMIN PROFILE DETAILS CARD */}
+            {user.role === UserRole.SUPER_ADMIN && (
+              <div className="bg-emerald-50/40 border border-emerald-200/60 rounded-2xl p-5 space-y-4 shadow-sm">
+                <div className="flex items-center gap-3 border-b border-emerald-200/50 pb-3">
+                  <div className="p-2 bg-emerald-100/80 text-emerald-800 rounded-xl">
+                    <ShieldCheck className="w-5 h-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-800 tracking-tight">Super Admin Profile Details</h3>
+                    <p className="text-[11px] text-slate-500 font-medium">Manage your personal credential metadata saved in the live cloud database</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      value={adminProfileName}
+                      onChange={(e) => setAdminProfileName(e.target.value)}
+                      className="w-full text-xs font-bold text-slate-800 bg-white border border-slate-200 focus:border-emerald-500 rounded-xl px-3.5 py-2 transition-all outline-none"
+                      placeholder="Dr. M. P. Singh"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">
+                      Designation
+                    </label>
+                    <input
+                      type="text"
+                      value={adminProfileDesignation}
+                      onChange={(e) => setAdminProfileDesignation(e.target.value)}
+                      className="w-full text-xs font-bold text-slate-800 bg-white border border-slate-200 focus:border-emerald-500 rounded-xl px-3.5 py-2 transition-all outline-none"
+                      placeholder="Senior Clinical Director / Super Admin"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">
+                      Contact Phone / WhatsApp
+                    </label>
+                    <input
+                      type="text"
+                      value={adminProfileContact}
+                      onChange={(e) => setAdminProfileContact(e.target.value)}
+                      className="w-full text-xs font-mono font-bold text-slate-800 bg-white border border-slate-200 focus:border-emerald-500 rounded-xl px-3.5 py-2 transition-all outline-none"
+                      placeholder="+91 XXXXX XXXXX"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={handleSaveAdminProfile}
+                    disabled={isSavingAdminProfile}
+                    className="px-5 py-2 bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    {isSavingAdminProfile ? "Saving Profile..." : "Update Profile Details"}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* PENDING REGISTRATION REQUESTS SECTION */}
             <div className="bg-amber-50/30 border border-amber-200/50 rounded-2xl p-5 space-y-4 shadow-sm">
               <div className="flex items-center justify-between border-b border-amber-200/40 pb-2">

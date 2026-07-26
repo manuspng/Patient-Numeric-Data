@@ -2800,6 +2800,10 @@ export default function App() {
                     <AdminMasterTables
                       user={user}
                       onSuccessToast={showToast}
+                      onProfileUpdate={(updatedUser) => {
+                        setUser(updatedUser);
+                        safeStorage.setItem("mpr_user", JSON.stringify(updatedUser));
+                      }}
                     />
                   </div>
                 ) : (
