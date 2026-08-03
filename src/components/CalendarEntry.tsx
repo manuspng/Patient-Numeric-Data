@@ -436,8 +436,11 @@ export default function CalendarEntry({
   const opdLevyRate = Number(customFieldsData["opd_levy_rate"] !== undefined ? customFieldsData["opd_levy_rate"] : storedRates.opdRate);
   const ipdLevyRate = Number(customFieldsData["ipd_levy_rate"] !== undefined ? customFieldsData["ipd_levy_rate"] : storedRates.ipdRate);
 
-  // Dynamic levy fragments
-  const totalNewOPD = Number(matrix.opd_male_new || 0) + Number(matrix.opd_female_new || 0) + Number(matrix.opd_child_new || 0) + Number(matrix.opd_elderly_new || 0);
+  // Dynamic levy fragments & totals calculated from diseaseLogs
+  const totalNewOPD = diseaseLogs.reduce((acc, curr) => acc + Number(curr.opd_male_new || 0) + Number(curr.opd_female_new || 0), 0);
+  const totalOldOPD = diseaseLogs.reduce((acc, curr) => acc + Number(curr.opd_male_old || 0) + Number(curr.opd_female_old || 0), 0);
+  const grandTotalOPD = totalNewOPD + totalOldOPD;
+
   const opdLevy = totalNewOPD * opdLevyRate;
 
   const totalNewIPD = Number(matrix.ipd_male_new || 0) + Number(matrix.ipd_female_new || 0);
@@ -753,7 +756,7 @@ export default function CalendarEntry({
   const handleBulkCellChange = (
     diseaseId: string, 
     diseaseName: string, 
-    field: "old" | "new" | "male", 
+    field: "new" | "old", 
     val: number
   ) => {
     const sanitizedVal = Math.max(0, val);
@@ -772,27 +775,26 @@ export default function CalendarEntry({
         opd_elderly_old: 0,
       };
 
-      let currentOld = existingLog.opd_male_old + existingLog.opd_female_old;
-      let currentNew = existingLog.opd_male_new + existingLog.opd_female_new;
-      let currentMale = existingLog.opd_male_new + existingLog.opd_male_old;
+      let currentNew = (existingLog.opd_male_new || 0) + (existingLog.opd_female_new || 0);
+      let currentOld = (existingLog.opd_male_old || 0) + (existingLog.opd_female_old || 0);
 
-      if (field === "old") currentOld = sanitizedVal;
       if (field === "new") currentNew = sanitizedVal;
-      if (field === "male") currentMale = sanitizedVal;
+      if (field === "old") currentOld = sanitizedVal;
 
-      const currentTotal = currentOld + currentNew;
+      const currentTotal = currentNew + currentOld;
 
-      let opd_male_new = 0;
-      let opd_male_old = 0;
-      let opd_female_new = 0;
-      let opd_female_old = 0;
-
-      if (currentTotal > 0) {
-        opd_male_new = Math.min(currentNew, Math.round((currentNew / currentTotal) * currentMale));
-        opd_male_old = Math.max(0, currentMale - opd_male_new);
-        opd_female_new = Math.max(0, currentNew - opd_male_new);
-        opd_female_old = Math.max(0, currentOld - opd_male_old);
+      if (currentTotal === 0) {
+        return prevLogs.filter(l => l.diseaseId !== diseaseId);
       }
+
+      const totalMalePrev = (existingLog.opd_male_new || 0) + (existingLog.opd_male_old || 0);
+      const prevTotal = (existingLog.opd_male_new || 0) + (existingLog.opd_female_new || 0) + (existingLog.opd_male_old || 0) + (existingLog.opd_female_old || 0);
+      const maleRatio = prevTotal > 0 ? (totalMalePrev / prevTotal) : 0.5;
+
+      const opd_male_new = Math.round(currentNew * maleRatio);
+      const opd_female_new = currentNew - opd_male_new;
+      const opd_male_old = Math.round(currentOld * maleRatio);
+      const opd_female_old = currentOld - opd_male_old;
 
       const updatedLog: DiseaseOPDLog = {
         ...existingLog,
@@ -803,10 +805,6 @@ export default function CalendarEntry({
         opd_female_new,
         opd_female_old
       };
-
-      if (currentTotal === 0 && currentMale === 0) {
-        return prevLogs.filter(l => l.diseaseId !== diseaseId);
-      }
 
       const exists = prevLogs.some(l => l.diseaseId === diseaseId);
       if (exists) {
@@ -1503,14 +1501,15 @@ export default function CalendarEntry({
 
           {isSection1Open && (
             <>
+              {/* 1. TOP SECTION: DISEASE-WISE ENTRY (NO GENDER BREAKDOWN ON ROWS) */}
               <div className="space-y-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-200 pb-2.5">
                   <div>
                     <span className={`text-xs font-bold ${ct.subHeader} uppercase tracking-wider block`}>
-                      Daily Patient Disease Registry (रोगवार विवरण)
+                      1. Disease-Wise OPD Entry (रोगवार विवरण)
                     </span>
                     <span className="text-[11px] text-slate-500 font-medium">
-                      Bulk entry mode: Use Tab key to navigate quickly through fields for all diseases in one pass.
+                      Tab key workflow: Enter New & Old patient counts. Gender distribution is collected in the bottom table.
                     </span>
                   </div>
 
@@ -1536,18 +1535,16 @@ export default function CalendarEntry({
                   </div>
                 </div>
 
-                {/* Bulk Entry Registry Table */}
-                <div className={`overflow-x-auto border ${ct.cardBorder} rounded-xl shadow-xs scrollbar-thin max-h-[600px] overflow-y-auto`}>
-                  <table className="w-full text-left border-collapse min-w-[650px]" id="bulk-disease-registry-table">
+                {/* Bulk Entry Registry Table (No Gender Breakdown) */}
+                <div className={`overflow-x-auto border ${ct.cardBorder} rounded-xl shadow-xs scrollbar-thin max-h-[550px] overflow-y-auto`}>
+                  <table className="w-full text-left border-collapse min-w-[500px]" id="bulk-disease-registry-table">
                     <thead className="sticky top-0 z-10 shadow-3xs">
                       <tr className="bg-slate-800 text-white text-[10px] md:text-[11px] font-bold uppercase tracking-wider">
                         <th className="px-3 py-2.5 w-12 text-center">S.No</th>
                         <th className="px-3 py-2.5 text-left">Disease Name (रोग विवरण)</th>
-                        <th className="px-2 py-2.5 text-center w-28">Old Patients<br/><span className="text-[9px] font-normal text-slate-300">(प्राचीन रोगी)</span></th>
-                        <th className="px-2 py-2.5 text-center w-28">New Patients<br/><span className="text-[9px] font-normal text-slate-300">(नवीन रोगी)</span></th>
-                        <th className="px-2 py-2.5 text-center w-28 bg-slate-700 text-amber-300">Total Patients<br/><span className="text-[9px] font-normal text-amber-200/80">(Auto Total)</span></th>
-                        <th className="px-2 py-2.5 text-center w-28">Male Patients<br/><span className="text-[9px] font-normal text-slate-300">(पुरुष रोगी)</span></th>
-                        <th className="px-2 py-2.5 text-center w-28 bg-slate-700 text-pink-300">Female Patients<br/><span className="text-[9px] font-normal text-pink-200/80">(Auto Female)</span></th>
+                        <th className="px-3 py-2.5 text-center w-36 bg-slate-750">New Patients<br/><span className="text-[9px] font-normal text-emerald-300">(नवीन रोगी)</span></th>
+                        <th className="px-3 py-2.5 text-center w-36 bg-slate-750">Old Patients<br/><span className="text-[9px] font-normal text-amber-300">(प्राचीन रोगी)</span></th>
+                        <th className="px-3 py-2.5 text-center w-36 bg-slate-700 text-amber-200">Total Patients<br/><span className="text-[9px] font-normal text-slate-300">(Auto Total)</span></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs font-medium">
@@ -1564,12 +1561,9 @@ export default function CalendarEntry({
                         })
                         .map((disease, idx) => {
                           const existingLog = diseaseLogs.find(l => l.diseaseId === disease.id);
-                          const oldVal = existingLog ? (existingLog.opd_male_old + existingLog.opd_female_old) : 0;
                           const newVal = existingLog ? (existingLog.opd_male_new + existingLog.opd_female_new) : 0;
-                          const totalVal = oldVal + newVal;
-                          const maleVal = existingLog ? (existingLog.opd_male_new + existingLog.opd_male_old) : 0;
-                          const femaleVal = Math.max(0, totalVal - maleVal);
-                          const isMaleInvalid = maleVal > totalVal && totalVal > 0;
+                          const oldVal = existingLog ? (existingLog.opd_male_old + existingLog.opd_female_old) : 0;
+                          const totalVal = newVal + oldVal;
 
                           return (
                             <tr 
@@ -1583,21 +1577,8 @@ export default function CalendarEntry({
                               <td className="px-3 py-2 text-center text-slate-400 font-mono text-[11px]">{idx + 1}</td>
                               <td className="px-3 py-2 font-semibold text-slate-800">{disease.name}</td>
                               
-                              {/* Old Patients */}
-                              <td className="px-2 py-1.5 text-center">
-                                <input
-                                  type="number"
-                                  disabled={isLocked}
-                                  min="0"
-                                  value={oldVal || ""}
-                                  placeholder="0"
-                                  onChange={(e) => handleBulkCellChange(disease.id, disease.name, "old", Number(e.target.value))}
-                                  className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-center font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-all"
-                                />
-                              </td>
-
-                              {/* New Patients */}
-                              <td className="px-2 py-1.5 text-center">
+                              {/* New Patients Input */}
+                              <td className="px-3 py-1.5 text-center">
                                 <input
                                   type="number"
                                   disabled={isLocked}
@@ -1605,51 +1586,31 @@ export default function CalendarEntry({
                                   value={newVal || ""}
                                   placeholder="0"
                                   onChange={(e) => handleBulkCellChange(disease.id, disease.name, "new", Number(e.target.value))}
-                                  className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-center font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-all"
+                                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-center font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-all"
+                                />
+                              </td>
+
+                              {/* Old Patients Input */}
+                              <td className="px-3 py-1.5 text-center">
+                                <input
+                                  type="number"
+                                  disabled={isLocked}
+                                  min="0"
+                                  value={oldVal || ""}
+                                  placeholder="0"
+                                  onChange={(e) => handleBulkCellChange(disease.id, disease.name, "old", Number(e.target.value))}
+                                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-center font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-all"
                                 />
                               </td>
 
                               {/* Total Patients (Computed Readonly) */}
-                              <td className="px-2 py-1.5 text-center">
+                              <td className="px-3 py-1.5 text-center">
                                 <input
                                   type="number"
                                   readOnly={true}
                                   disabled={true}
                                   value={totalVal}
-                                  className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 text-center font-extrabold text-amber-900 cursor-not-allowed shadow-inner"
-                                />
-                              </td>
-
-                              {/* Male Patients */}
-                              <td className="px-2 py-1.5 text-center relative">
-                                <input
-                                  type="number"
-                                  disabled={isLocked}
-                                  min="0"
-                                  value={maleVal || ""}
-                                  placeholder="0"
-                                  onChange={(e) => handleBulkCellChange(disease.id, disease.name, "male", Number(e.target.value))}
-                                  className={`w-full border rounded-lg px-2 py-1 text-center font-bold outline-none transition-all ${
-                                    isMaleInvalid 
-                                      ? "bg-rose-50 border-rose-500 text-rose-700 ring-2 ring-rose-300 font-black animate-pulse" 
-                                      : "bg-white border-slate-200 text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
-                                  }`}
-                                />
-                                {isMaleInvalid && (
-                                  <span className="block text-[9px] font-bold text-rose-600 mt-0.5 whitespace-nowrap">
-                                    Exceeds Total ({totalVal})!
-                                  </span>
-                                )}
-                              </td>
-
-                              {/* Female Patients (Computed Readonly) */}
-                              <td className="px-2 py-1.5 text-center">
-                                <input
-                                  type="number"
-                                  readOnly={true}
-                                  disabled={true}
-                                  value={femaleVal}
-                                  className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 text-center font-extrabold text-pink-900 cursor-not-allowed shadow-inner"
+                                  className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 text-center font-extrabold text-amber-900 cursor-not-allowed shadow-inner"
                                 />
                               </td>
                             </tr>
@@ -1659,14 +1620,20 @@ export default function CalendarEntry({
                   </table>
                 </div>
 
-                {/* Summary Totals & Actions Footer */}
+                {/* Reactive Totals Header Bar */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3.5 mt-2">
-                  <div className="flex items-center gap-4 text-xs font-bold text-slate-700">
+                  <div className="flex flex-wrap items-center gap-3 text-xs font-bold text-slate-700">
                     <span className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-3xs">
                       Recorded Diseases: <strong className="text-emerald-700 font-mono">{diseaseLogs.length}</strong>
                     </span>
                     <span className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-3xs">
-                      Total OPD Patients: <strong className="text-amber-800 font-mono">{diseaseLogs.reduce((acc, curr) => acc + (curr.opd_male_new + curr.opd_female_new + curr.opd_male_old + curr.opd_female_old), 0)}</strong>
+                      Total New OPD: <strong className="text-emerald-700 font-mono">{totalNewOPD}</strong>
+                    </span>
+                    <span className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-3xs">
+                      Total Old OPD: <strong className="text-amber-800 font-mono">{totalOldOPD}</strong>
+                    </span>
+                    <span className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-3xs">
+                      Grand Total OPD: <strong className="text-indigo-800 font-mono">{grandTotalOPD}</strong>
                     </span>
                   </div>
 
@@ -1684,92 +1651,161 @@ export default function CalendarEntry({
                 </div>
               </div>
 
-            {/* Gender-wise OPD Registration Breakdown Section */}
-            <div className={`${ct.subSectionBg} border rounded-xl p-5 mb-4`} id="gender-opd-breakdown-section">
-              <span className={`text-xs font-bold ${ct.subHeader} uppercase tracking-wider block border-b ${ct.cardBorder} pb-1.5 mb-4 -ml-[18px] mr-0`}>
-                OPD Gender-wise Distribution
-              </span>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* NEW PATIENTS CARD */}
-                <div className={`bg-white border ${ct.cardBorder} rounded-xl p-4 shadow-xs`} id="new-patients-gender-card">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-xs font-bold text-slate-700">New Patients</span>
-                    <span className={`text-xs font-black px-2.5 py-1 ${ct.badgeBg} border rounded-full`}>
-                      Total: {Number(matrix.opd_male_new || 0) + Number(matrix.opd_female_new || 0)}
+              {/* 2. BOTTOM SECTION: CUMULATIVE DAILY GENDER DISTRIBUTION */}
+              <div className={`${ct.subSectionBg} border rounded-2xl p-5 shadow-xs space-y-4 mt-6`} id="cumulative-gender-distribution-section">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3 gap-2">
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                      <UserCheck className="w-4.5 h-4.5 text-emerald-600" />
+                      2. Cumulative Daily Gender Distribution (कुल लिंगवार विवरण)
+                    </h5>
+                    <span className="text-[11px] text-slate-500 font-medium block">
+                      Overall daily gender breakdown. Male counts entered here; Female counts auto-calculated from disease totals above.
                     </span>
                   </div>
-
-                  {Number(matrix.opd_male_new || 0) + Number(matrix.opd_female_new || 0) === 0 ? (
-                    <p className="text-[11px] text-slate-400 italic">Please enter New Patients in the disease-wise section first.</p>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-500 mb-1">Male*</label>
-                        <input
-                          id="opd-male-new-gender-input"
-                          type="number"
-                          readOnly={true}
-                          onClick={handleDynamicCellClick}
-                          value={matrix.opd_male_new || 0}
-                          className={`w-full ${ct.computedBg} rounded-lg px-2.5 py-1 text-xs outline-none font-bold cursor-pointer transition-colors hover:opacity-90`}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-500 mb-1">Female*</label>
-                        <input
-                          id="opd-female-new-gender-input"
-                          type="number"
-                          readOnly={true}
-                          onClick={handleDynamicCellClick}
-                          value={matrix.opd_female_new || 0}
-                          className={`w-full ${ct.computedBg} rounded-lg px-2.5 py-1 text-xs outline-none font-bold cursor-pointer transition-colors hover:opacity-90`}
-                        />
-                      </div>
-                    </div>
-                  )}
+                  <div className="bg-indigo-50 text-indigo-900 border border-indigo-200 font-extrabold text-xs px-3 py-1 rounded-full shadow-3xs text-center font-mono">
+                    Grand Total: {grandTotalOPD} Patients
+                  </div>
                 </div>
 
-                {/* OLD PATIENTS CARD */}
-                <div className={`bg-white border ${ct.cardBorder} rounded-xl p-4 shadow-xs`} id="old-patients-gender-card">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-xs font-bold text-slate-700">Old Patients</span>
-                    <span className={`text-xs font-black px-2.5 py-1 ${ct.badgeBg} border rounded-full`}>
-                      Total: {Number(matrix.opd_male_old || 0) + Number(matrix.opd_female_old || 0)}
-                    </span>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* ROW 1 / CARD 1: NEW PATIENTS OVERALL */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        Row 1: New Patients Overall (नवीन रोगी)
+                      </span>
+                      <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-mono">
+                        Total New: {totalNewOPD}
+                      </span>
+                    </div>
 
-                  {Number(matrix.opd_male_old || 0) + Number(matrix.opd_female_old || 0) === 0 ? (
-                    <p className="text-[11px] text-slate-400 italic">Please enter Old Patients in the disease-wise section first.</p>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-3">
+                      {/* Total New (Readonly Auto-summed from top section) */}
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-500 mb-1">Male*</label>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">Total New (Auto)</label>
                         <input
-                          id="opd-male-old-gender-input"
                           type="number"
                           readOnly={true}
-                          onClick={handleDynamicCellClick}
-                          value={matrix.opd_male_old || 0}
-                          className={`w-full ${ct.computedBg} rounded-lg px-2.5 py-1 text-xs outline-none font-bold cursor-pointer transition-colors hover:opacity-90`}
+                          disabled={true}
+                          value={totalNewOPD}
+                          className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-center font-extrabold text-slate-800 cursor-not-allowed shadow-inner"
                         />
                       </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-500 mb-1">Female*</label>
+
+                      {/* Male New Patients (Number Input) */}
+                      <div className="relative">
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Male New (पुरुष)*</label>
                         <input
-                          id="opd-female-old-gender-input"
+                          type="number"
+                          disabled={isLocked || totalNewOPD === 0}
+                          min="0"
+                          max={totalNewOPD}
+                          value={matrix.opd_male_new || ""}
+                          placeholder="0"
+                          onChange={(e) => {
+                            const val = Math.max(0, Number(e.target.value));
+                            handleMatrixChange("opd_male_new", val);
+                          }}
+                          className={`w-full border rounded-lg px-2.5 py-1.5 text-xs text-center font-bold outline-none transition-all ${
+                            (matrix.opd_male_new || 0) > totalNewOPD && totalNewOPD > 0
+                              ? "bg-rose-50 border-rose-500 text-rose-700 ring-2 ring-rose-300 animate-pulse font-black"
+                              : "bg-white border-slate-200 text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                          }`}
+                        />
+                      </div>
+
+                      {/* Female New Patients (Readonly Auto-computed) */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-pink-700 mb-1">Female New (Auto)</label>
+                        <input
                           type="number"
                           readOnly={true}
-                          onClick={handleDynamicCellClick}
-                          value={matrix.opd_female_old || 0}
-                          className="w-full bg-amber-50/90 border border-amber-200 rounded-lg px-2.5 py-1 text-xs text-amber-900 outline-none font-bold cursor-pointer hover:bg-amber-100 transition-colors"
+                          disabled={true}
+                          value={Math.max(0, totalNewOPD - (matrix.opd_male_new || 0))}
+                          className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-center font-extrabold text-pink-900 cursor-not-allowed shadow-inner"
                         />
                       </div>
                     </div>
-                  )}
+
+                    {(matrix.opd_male_new || 0) > totalNewOPD && totalNewOPD > 0 && (
+                      <p className="text-[10px] font-bold text-rose-600 flex items-center gap-1 bg-rose-50 p-1.5 rounded-md border border-rose-200">
+                        <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        Male New Patients ({matrix.opd_male_new}) cannot exceed Total New Patients ({totalNewOPD})!
+                      </p>
+                    )}
+                  </div>
+
+                  {/* ROW 2 / CARD 2: OLD PATIENTS OVERALL */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                        Row 2: Old Patients Overall (प्राचीन रोगी)
+                      </span>
+                      <span className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md font-mono">
+                        Total Old: {totalOldOPD}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      {/* Total Old (Readonly Auto-summed from top section) */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1">Total Old (Auto)</label>
+                        <input
+                          type="number"
+                          readOnly={true}
+                          disabled={true}
+                          value={totalOldOPD}
+                          className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-center font-extrabold text-slate-800 cursor-not-allowed shadow-inner"
+                        />
+                      </div>
+
+                      {/* Male Old Patients (Number Input) */}
+                      <div className="relative">
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Male Old (पुरुष)*</label>
+                        <input
+                          type="number"
+                          disabled={isLocked || totalOldOPD === 0}
+                          min="0"
+                          max={totalOldOPD}
+                          value={matrix.opd_male_old || ""}
+                          placeholder="0"
+                          onChange={(e) => {
+                            const val = Math.max(0, Number(e.target.value));
+                            handleMatrixChange("opd_male_old", val);
+                          }}
+                          className={`w-full border rounded-lg px-2.5 py-1.5 text-xs text-center font-bold outline-none transition-all ${
+                            (matrix.opd_male_old || 0) > totalOldOPD && totalOldOPD > 0
+                              ? "bg-rose-50 border-rose-500 text-rose-700 ring-2 ring-rose-300 animate-pulse font-black"
+                              : "bg-white border-slate-200 text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                          }`}
+                        />
+                      </div>
+
+                      {/* Female Old Patients (Readonly Auto-computed) */}
+                      <div>
+                        <label className="block text-[10px] font-bold text-pink-700 mb-1">Female Old (Auto)</label>
+                        <input
+                          type="number"
+                          readOnly={true}
+                          disabled={true}
+                          value={Math.max(0, totalOldOPD - (matrix.opd_male_old || 0))}
+                          className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-center font-extrabold text-pink-900 cursor-not-allowed shadow-inner"
+                        />
+                      </div>
+                    </div>
+
+                    {(matrix.opd_male_old || 0) > totalOldOPD && totalOldOPD > 0 && (
+                      <p className="text-[10px] font-bold text-rose-600 flex items-center gap-1 bg-rose-50 p-1.5 rounded-md border border-rose-200">
+                        <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        Male Old Patients ({matrix.opd_male_old}) cannot exceed Total Old Patients ({totalOldOPD})!
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
             
           {/* IPD Admissions Breakdown */}
 
