@@ -56,7 +56,7 @@ import AdminMasterTables from "./components/AdminMasterTables";
 import ReportDesigner from "./components/ReportDesigner";
 import { FacilitySettings } from "./components/FacilitySettings";
 import { auth, googleProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, db as firestoreDb } from "./firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
 
 // --- START OF SAFE STORAGE HELPER ---
 // Handles environments where third-party frames or private windows block access to localStorage, preventing crash.
@@ -736,7 +736,32 @@ const customFetch = async function (input: any, init?: any) {
         if (method === "GET") {
           const date = parsedUrl.searchParams.get("date");
           const hospId = parsedUrl.searchParams.get("hospitalId");
-          const report = db.dailyReports.find((r: any) => r.hospitalId === hospId && r.recordDate === date);
+
+          let report = null;
+
+          // Try querying Cloud Firestore first for cross-device sync!
+          if (hospId && date) {
+            try {
+              const docId = `rep-${hospId}-${date}`;
+              const docSnap = await getDoc(doc(firestoreDb, "dailyReports", docId));
+              if (docSnap.exists()) {
+                report = docSnap.data();
+                if (report) {
+                  db.dailyReports = db.dailyReports || [];
+                  db.dailyReports = db.dailyReports.filter((r: any) => !(r.hospitalId === hospId && r.recordDate === date));
+                  db.dailyReports.push(report);
+                  saveLocalMockDB(db);
+                }
+              }
+            } catch (fsErr) {
+              console.warn("Could not fetch daily report from Cloud Firestore:", fsErr);
+            }
+          }
+
+          if (!report) {
+            report = db.dailyReports.find((r: any) => r.hospitalId === hospId && r.recordDate === date);
+          }
+
           if (report) {
             responseData = { success: true, report: report, isNew: false };
           } else {
@@ -776,6 +801,12 @@ const customFetch = async function (input: any, init?: any) {
             db.dailyReports = db.dailyReports.filter((r: any) => !(r.hospitalId === report.hospitalId && r.recordDate === report.recordDate));
             db.dailyReports.push(report);
             saveLocalMockDB(db);
+
+            // Sync securely to Cloud Firestore so all devices (MacBook, iPhone, Super Admin) receive it instantly!
+            const docId = report.id || `rep-${report.hospitalId}-${report.recordDate}`;
+            setDoc(doc(firestoreDb, "dailyReports", docId), report, { merge: true }).catch(err => {
+              console.warn("Could not save daily report to Cloud Firestore:", err);
+            });
           }
           responseData = { success: true };
         }
@@ -785,6 +816,24 @@ const customFetch = async function (input: any, init?: any) {
         const targetHospitalId = parsedUrl.searchParams.get("hospitalId") || "";
         const startDate = parsedUrl.searchParams.get("startDate") || "";
         const endDate = parsedUrl.searchParams.get("endDate") || "";
+        
+        // Sync all daily reports from Cloud Firestore into local db before aggregating
+        try {
+          const querySnap = await getDocs(collection(firestoreDb, "dailyReports"));
+          if (!querySnap.empty) {
+            db.dailyReports = db.dailyReports || [];
+            querySnap.forEach((docSnap) => {
+              const r = docSnap.data();
+              if (r && r.hospitalId && r.recordDate) {
+                db.dailyReports = db.dailyReports.filter((existing: any) => !(existing.hospitalId === r.hospitalId && existing.recordDate === r.recordDate));
+                db.dailyReports.push(r);
+              }
+            });
+            saveLocalMockDB(db);
+          }
+        } catch (fsErr) {
+          console.warn("Could not fetch reports from Cloud Firestore during aggregation:", fsErr);
+        }
         
         let monthlyReports = [];
         // Filter out any malformed entries without recordDate
@@ -1990,6 +2039,31 @@ export default function App() {
     };
 
     window.addEventListener("hospitals-updated", handleHospitalsUpdated);
+
+    // Background sync all Cloud Firestore daily reports on startup for seamless cross-device synchronization
+    const syncAllFirestoreReportsOnStartup = async () => {
+      try {
+        const querySnap = await getDocs(collection(firestoreDb, "dailyReports"));
+        if (!querySnap.empty) {
+          const db = getLocalMockDB();
+          db.dailyReports = db.dailyReports || [];
+          querySnap.forEach((docSnap) => {
+            const r = docSnap.data();
+            if (r && r.hospitalId && r.recordDate) {
+              db.dailyReports = db.dailyReports.filter((existing: any) => !(existing.hospitalId === r.hospitalId && existing.recordDate === r.recordDate));
+              db.dailyReports.push(r);
+            }
+          });
+          saveLocalMockDB(db);
+          console.log(`[FIRESTORE SYNC] Synced ${querySnap.size} reports from Cloud Firestore into local database.`);
+        }
+      } catch (err) {
+        console.warn("Could not sync Firestore reports on startup:", err);
+      }
+    };
+
+    syncAllFirestoreReportsOnStartup();
+
     return () => {
       window.removeEventListener("hospitals-updated", handleHospitalsUpdated);
     };
