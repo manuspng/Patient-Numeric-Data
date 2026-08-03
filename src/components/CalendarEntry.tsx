@@ -1657,7 +1657,7 @@ export default function CalendarEntry({
                   <div>
                     <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                       <UserCheck className="w-4.5 h-4.5 text-emerald-600" />
-                      2. Cumulative Daily Gender Distribution (कुल लिंगवार विवरण)
+                      2. Cumulative Daily Gender Distribution
                     </h5>
                     <span className="text-[11px] text-slate-500 font-medium block">
                       Overall daily gender breakdown. Male counts entered here; Female counts auto-calculated from disease totals above.
@@ -1674,7 +1674,7 @@ export default function CalendarEntry({
                     <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                       <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                        Row 1: New Patients Overall (नवीन रोगी)
+                        Row 1: New Patients
                       </span>
                       <span className="text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-mono">
                         Total New: {totalNewOPD}
@@ -1696,7 +1696,7 @@ export default function CalendarEntry({
 
                       {/* Male New Patients (Number Input) */}
                       <div className="relative">
-                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Male New (पुरुष)*</label>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Male New*</label>
                         <input
                           type="number"
                           disabled={isLocked || totalNewOPD === 0}
@@ -1742,7 +1742,7 @@ export default function CalendarEntry({
                     <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                       <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                        Row 2: Old Patients Overall (प्राचीन रोगी)
+                        Row 2: Old Patients
                       </span>
                       <span className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md font-mono">
                         Total Old: {totalOldOPD}
@@ -1764,7 +1764,7 @@ export default function CalendarEntry({
 
                       {/* Male Old Patients (Number Input) */}
                       <div className="relative">
-                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Male Old (पुरुष)*</label>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Male Old*</label>
                         <input
                           type="number"
                           disabled={isLocked || totalOldOPD === 0}
