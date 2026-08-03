@@ -1681,10 +1681,10 @@ export default function CalendarEntry({
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-3 gap-2.5">
                       {/* Total New (Readonly Auto-summed from top section) */}
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-500 mb-1">Total New (Auto)</label>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1 whitespace-nowrap truncate" title="Total New (Auto)">Total New (Auto)</label>
                         <input
                           type="number"
                           readOnly={true}
@@ -1696,7 +1696,7 @@ export default function CalendarEntry({
 
                       {/* Male New Patients (Number Input) */}
                       <div className="relative">
-                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Male New*</label>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1 whitespace-nowrap truncate" title="Male New*">Male New*</label>
                         <input
                           type="number"
                           disabled={isLocked || totalNewOPD === 0}
@@ -1718,7 +1718,7 @@ export default function CalendarEntry({
 
                       {/* Female New Patients (Readonly Auto-computed) */}
                       <div>
-                        <label className="block text-[10px] font-bold text-pink-700 mb-1">Female New (Auto)</label>
+                        <label className="block text-[10px] font-bold text-pink-700 mb-1 whitespace-nowrap truncate" title="Female New (Auto)">Female New (Auto)</label>
                         <input
                           type="number"
                           readOnly={true}
@@ -1749,10 +1749,10 @@ export default function CalendarEntry({
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-3 gap-2.5">
                       {/* Total Old (Readonly Auto-summed from top section) */}
                       <div>
-                        <label className="block text-[10px] font-bold text-slate-500 mb-1">Total Old (Auto)</label>
+                        <label className="block text-[10px] font-bold text-slate-500 mb-1 whitespace-nowrap truncate" title="Total Old (Auto)">Total Old (Auto)</label>
                         <input
                           type="number"
                           readOnly={true}
@@ -1764,7 +1764,7 @@ export default function CalendarEntry({
 
                       {/* Male Old Patients (Number Input) */}
                       <div className="relative">
-                        <label className="block text-[10px] font-bold text-slate-600 mb-1">Male Old*</label>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1 whitespace-nowrap truncate" title="Male Old*">Male Old*</label>
                         <input
                           type="number"
                           disabled={isLocked || totalOldOPD === 0}
@@ -1786,7 +1786,7 @@ export default function CalendarEntry({
 
                       {/* Female Old Patients (Readonly Auto-computed) */}
                       <div>
-                        <label className="block text-[10px] font-bold text-pink-700 mb-1">Female Old (Auto)</label>
+                        <label className="block text-[10px] font-bold text-pink-700 mb-1 whitespace-nowrap truncate" title="Female Old (Auto)">Female Old (Auto)</label>
                         <input
                           type="number"
                           readOnly={true}
