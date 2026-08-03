@@ -292,6 +292,9 @@ export default function CalendarEntry({
   const [diseaseElderlyNew, setDiseaseElderlyNew] = useState<number>(0);
   const [diseaseElderlyOld, setDiseaseElderlyOld] = useState<number>(0);
 
+  const [diseaseSearchQuery, setDiseaseSearchQuery] = useState<string>("");
+  const [showOnlyEntered, setShowOnlyEntered] = useState<boolean>(false);
+
   const [lab, setLab] = useState<InvestigationsLabLog>({
     hemoglobin: 0, blood_sugar: 0, urine_sugar: 0, urine_albumin: 0,
     malaria: 0, dengue: 0, typhoid: 0,
@@ -745,6 +748,73 @@ export default function CalendarEntry({
       setEditingDiseaseId(null);
     }
     setDiseaseLogs(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleBulkCellChange = (
+    diseaseId: string, 
+    diseaseName: string, 
+    field: "old" | "new" | "male", 
+    val: number
+  ) => {
+    const sanitizedVal = Math.max(0, val);
+
+    setDiseaseLogs(prevLogs => {
+      const existingLog = prevLogs.find(l => l.diseaseId === diseaseId) || {
+        diseaseId,
+        diseaseName,
+        opd_male_new: 0,
+        opd_male_old: 0,
+        opd_female_new: 0,
+        opd_female_old: 0,
+        opd_child_new: 0,
+        opd_child_old: 0,
+        opd_elderly_new: 0,
+        opd_elderly_old: 0,
+      };
+
+      let currentOld = existingLog.opd_male_old + existingLog.opd_female_old;
+      let currentNew = existingLog.opd_male_new + existingLog.opd_female_new;
+      let currentMale = existingLog.opd_male_new + existingLog.opd_male_old;
+
+      if (field === "old") currentOld = sanitizedVal;
+      if (field === "new") currentNew = sanitizedVal;
+      if (field === "male") currentMale = sanitizedVal;
+
+      const currentTotal = currentOld + currentNew;
+
+      let opd_male_new = 0;
+      let opd_male_old = 0;
+      let opd_female_new = 0;
+      let opd_female_old = 0;
+
+      if (currentTotal > 0) {
+        opd_male_new = Math.min(currentNew, Math.round((currentNew / currentTotal) * currentMale));
+        opd_male_old = Math.max(0, currentMale - opd_male_new);
+        opd_female_new = Math.max(0, currentNew - opd_male_new);
+        opd_female_old = Math.max(0, currentOld - opd_male_old);
+      }
+
+      const updatedLog: DiseaseOPDLog = {
+        ...existingLog,
+        diseaseId,
+        diseaseName,
+        opd_male_new,
+        opd_male_old,
+        opd_female_new,
+        opd_female_old
+      };
+
+      if (currentTotal === 0 && currentMale === 0) {
+        return prevLogs.filter(l => l.diseaseId !== diseaseId);
+      }
+
+      const exists = prevLogs.some(l => l.diseaseId === diseaseId);
+      if (exists) {
+        return prevLogs.map(l => (l.diseaseId === diseaseId ? updatedLog : l));
+      } else {
+        return [...prevLogs, updatedLog];
+      }
+    });
   };
 
   const fetchMonthSubmissionStatus = async () => {
@@ -1433,191 +1503,186 @@ export default function CalendarEntry({
 
           {isSection1Open && (
             <>
-              {/* New vs Old Grid */}
               <div className="space-y-4">
-                <span className={`text-xs font-bold ${ct.subHeader} uppercase tracking-wider block border-b ${ct.cardBorder} pb-1`}>OPD (Disease Wise) Entry</span>
-            
-            <div className={`${ct.subSectionBg} border rounded-xl p-4 space-y-4`} id="opd-disease-form-container">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Select Disease Name</label>
-                  <select
-                    id="disease-select-dropdown"
-                    disabled={isLocked}
-                    value={selectedDiseaseId}
-                    onChange={(e) => handleDiseaseSelectChange(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-current/15 focus:border-current outline-none"
-                  >
-                    {masterDiseases.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} ({d.category})
-                      </option>
-                    ))}
-                    <option value="CUSTOM">+ Add Custom Disease Name...</option>
-                  </select>
-                </div>
-
-                {isCustomDisease && (
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-200 pb-2.5">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Enter Custom Disease Name</label>
+                    <span className={`text-xs font-bold ${ct.subHeader} uppercase tracking-wider block`}>
+                      Daily Patient Disease Registry (रोगवार विवरण)
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      Bulk entry mode: Use Tab key to navigate quickly through fields for all diseases in one pass.
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
                     <input
-                      id="custom-disease-name-input"
                       type="text"
-                      disabled={isLocked}
-                      value={customDiseaseName}
-                      onChange={(e) => setCustomDiseaseName(e.target.value)}
-                      placeholder="e.g. Chronic Fever"
-                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:ring-2 focus:ring-current/15 focus:border-current outline-none"
+                      placeholder="🔍 Search disease by name..."
+                      value={diseaseSearchQuery}
+                      onChange={(e) => setDiseaseSearchQuery(e.target.value)}
+                      className="bg-white border border-slate-200 rounded-lg px-3 py-1 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500/20 w-48 md:w-56"
                     />
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* New Patients Breakdown */}
-                <div className={`space-y-3 bg-white p-3 rounded-xl border ${ct.cardBorder}`}>
-                  <span className={`text-[11px] font-bold ${ct.subHeader} block border-b ${ct.cardBorder} pb-1`}>New Patients (नवीन रोगी)</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 mb-1">Male (पुरुष)*</label>
-                      <input
-                        id="disease-input-male-new"
-                        type="number"
-                        disabled={isLocked}
-                        min="0"
-                        value={diseaseMaleNew}
-                        onChange={(e) => setDiseaseMaleNew(Math.max(0, Number(e.target.value)))}
-                        className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 focus:ring-2 focus:ring-current/15 focus:border-current outline-none font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 mb-1">Female (महिला)*</label>
-                      <input
-                        id="disease-input-female-new"
-                        type="number"
-                        disabled={isLocked}
-                        min="0"
-                        value={diseaseFemaleNew}
-                        onChange={(e) => setDiseaseFemaleNew(Math.max(0, Number(e.target.value)))}
-                        className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 focus:ring-2 focus:ring-current/15 focus:border-current outline-none font-bold"
-                      />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowOnlyEntered(!showOnlyEntered)}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all ${
+                        showOnlyEntered
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-300 shadow-3xs"
+                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      {showOnlyEntered ? "Entered Only (>0)" : "Show All"}
+                    </button>
                   </div>
                 </div>
 
-                {/* Old Patients Breakdown */}
-                <div className={`space-y-3 bg-white p-3 rounded-xl border ${ct.cardBorder}`}>
-                  <span className={`text-[11px] font-bold ${ct.subHeader} block border-b ${ct.cardBorder} pb-1`}>Old Patients (प्राचीन रोगी)</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 mb-1">Male (पुरुष)*</label>
-                      <input
-                        id="disease-input-male-old"
-                        type="number"
-                        disabled={isLocked}
-                        min="0"
-                        value={diseaseMaleOld}
-                        onChange={(e) => setDiseaseMaleOld(Math.max(0, Number(e.target.value)))}
-                        className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 focus:ring-2 focus:ring-current/15 focus:border-current outline-none font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 mb-1">Female (महिला)*</label>
-                      <input
-                        id="disease-input-female-old"
-                        type="number"
-                        disabled={isLocked}
-                        min="0"
-                        value={diseaseFemaleOld}
-                        onChange={(e) => setDiseaseFemaleOld(Math.max(0, Number(e.target.value)))}
-                        className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 focus:ring-2 focus:ring-current/15 focus:border-current outline-none font-bold"
-                      />
-                    </div>
+                {/* Bulk Entry Registry Table */}
+                <div className={`overflow-x-auto border ${ct.cardBorder} rounded-xl shadow-xs scrollbar-thin max-h-[600px] overflow-y-auto`}>
+                  <table className="w-full text-left border-collapse min-w-[650px]" id="bulk-disease-registry-table">
+                    <thead className="sticky top-0 z-10 shadow-3xs">
+                      <tr className="bg-slate-800 text-white text-[10px] md:text-[11px] font-bold uppercase tracking-wider">
+                        <th className="px-3 py-2.5 w-12 text-center">S.No</th>
+                        <th className="px-3 py-2.5 text-left">Disease Name (रोग विवरण)</th>
+                        <th className="px-2 py-2.5 text-center w-28">Old Patients<br/><span className="text-[9px] font-normal text-slate-300">(प्राचीन रोगी)</span></th>
+                        <th className="px-2 py-2.5 text-center w-28">New Patients<br/><span className="text-[9px] font-normal text-slate-300">(नवीन रोगी)</span></th>
+                        <th className="px-2 py-2.5 text-center w-28 bg-slate-700 text-amber-300">Total Patients<br/><span className="text-[9px] font-normal text-amber-200/80">(Auto Total)</span></th>
+                        <th className="px-2 py-2.5 text-center w-28">Male Patients<br/><span className="text-[9px] font-normal text-slate-300">(पुरुष रोगी)</span></th>
+                        <th className="px-2 py-2.5 text-center w-28 bg-slate-700 text-pink-300">Female Patients<br/><span className="text-[9px] font-normal text-pink-200/80">(Auto Female)</span></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-xs font-medium">
+                      {masterDiseases
+                        .filter(d => {
+                          const matchesSearch = d.name.toLowerCase().includes(diseaseSearchQuery.toLowerCase());
+                          if (!matchesSearch) return false;
+                          if (showOnlyEntered) {
+                            const log = diseaseLogs.find(l => l.diseaseId === d.id);
+                            const total = log ? (log.opd_male_new + log.opd_female_new + log.opd_male_old + log.opd_female_old) : 0;
+                            return total > 0;
+                          }
+                          return true;
+                        })
+                        .map((disease, idx) => {
+                          const existingLog = diseaseLogs.find(l => l.diseaseId === disease.id);
+                          const oldVal = existingLog ? (existingLog.opd_male_old + existingLog.opd_female_old) : 0;
+                          const newVal = existingLog ? (existingLog.opd_male_new + existingLog.opd_female_new) : 0;
+                          const totalVal = oldVal + newVal;
+                          const maleVal = existingLog ? (existingLog.opd_male_new + existingLog.opd_male_old) : 0;
+                          const femaleVal = Math.max(0, totalVal - maleVal);
+                          const isMaleInvalid = maleVal > totalVal && totalVal > 0;
+
+                          return (
+                            <tr 
+                              key={disease.id}
+                              className={`transition-colors ${
+                                totalVal > 0 
+                                  ? "bg-emerald-50/30 hover:bg-emerald-50/60" 
+                                  : "bg-white hover:bg-slate-50/80"
+                              }`}
+                            >
+                              <td className="px-3 py-2 text-center text-slate-400 font-mono text-[11px]">{idx + 1}</td>
+                              <td className="px-3 py-2 font-semibold text-slate-800">{disease.name}</td>
+                              
+                              {/* Old Patients */}
+                              <td className="px-2 py-1.5 text-center">
+                                <input
+                                  type="number"
+                                  disabled={isLocked}
+                                  min="0"
+                                  value={oldVal || ""}
+                                  placeholder="0"
+                                  onChange={(e) => handleBulkCellChange(disease.id, disease.name, "old", Number(e.target.value))}
+                                  className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-center font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-all"
+                                />
+                              </td>
+
+                              {/* New Patients */}
+                              <td className="px-2 py-1.5 text-center">
+                                <input
+                                  type="number"
+                                  disabled={isLocked}
+                                  min="0"
+                                  value={newVal || ""}
+                                  placeholder="0"
+                                  onChange={(e) => handleBulkCellChange(disease.id, disease.name, "new", Number(e.target.value))}
+                                  className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-center font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-all"
+                                />
+                              </td>
+
+                              {/* Total Patients (Computed Readonly) */}
+                              <td className="px-2 py-1.5 text-center">
+                                <input
+                                  type="number"
+                                  readOnly={true}
+                                  disabled={true}
+                                  value={totalVal}
+                                  className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 text-center font-extrabold text-amber-900 cursor-not-allowed shadow-inner"
+                                />
+                              </td>
+
+                              {/* Male Patients */}
+                              <td className="px-2 py-1.5 text-center relative">
+                                <input
+                                  type="number"
+                                  disabled={isLocked}
+                                  min="0"
+                                  value={maleVal || ""}
+                                  placeholder="0"
+                                  onChange={(e) => handleBulkCellChange(disease.id, disease.name, "male", Number(e.target.value))}
+                                  className={`w-full border rounded-lg px-2 py-1 text-center font-bold outline-none transition-all ${
+                                    isMaleInvalid 
+                                      ? "bg-rose-50 border-rose-500 text-rose-700 ring-2 ring-rose-300 font-black animate-pulse" 
+                                      : "bg-white border-slate-200 text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                                  }`}
+                                />
+                                {isMaleInvalid && (
+                                  <span className="block text-[9px] font-bold text-rose-600 mt-0.5 whitespace-nowrap">
+                                    Exceeds Total ({totalVal})!
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* Female Patients (Computed Readonly) */}
+                              <td className="px-2 py-1.5 text-center">
+                                <input
+                                  type="number"
+                                  readOnly={true}
+                                  disabled={true}
+                                  value={femaleVal}
+                                  className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 text-center font-extrabold text-pink-900 cursor-not-allowed shadow-inner"
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Summary Totals & Actions Footer */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3.5 mt-2">
+                  <div className="flex items-center gap-4 text-xs font-bold text-slate-700">
+                    <span className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-3xs">
+                      Recorded Diseases: <strong className="text-emerald-700 font-mono">{diseaseLogs.length}</strong>
+                    </span>
+                    <span className="bg-white border border-slate-200 px-3 py-1.5 rounded-lg shadow-3xs">
+                      Total OPD Patients: <strong className="text-amber-800 font-mono">{diseaseLogs.reduce((acc, curr) => acc + (curr.opd_male_new + curr.opd_female_new + curr.opd_male_old + curr.opd_female_old), 0)}</strong>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={isLocked || diseaseLogs.length === 0}
+                      onClick={() => setDiseaseLogs([])}
+                      aria-label="Clear all disease log entries"
+                      className="px-3 py-1.5 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold rounded-lg transition-all disabled:opacity-40"
+                    >
+                      Clear Registry
+                    </button>
                   </div>
                 </div>
               </div>
-
-              <div className="flex justify-end pt-2">
-                <button
-                  id="add-disease-log-button"
-                  type="button"
-                  disabled={isLocked}
-                  onClick={handleAddDiseaseLog}
-                  className={`${
-                    editingDiseaseId 
-                      ? "bg-amber-600 hover:bg-amber-700 shadow-sm shadow-amber-600/10 hover:shadow-amber-600/20" 
-                      : `${ct.buttonBg} shadow-sm shadow-current/10 hover:shadow-current/20`
-                  } text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  {editingDiseaseId ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                  {editingDiseaseId ? "Save After Editing" : "Add / Update Disease Entry"}
-                </button>
-              </div>
-            </div>
-
-            {/* Disease Logs List Table */}
-            <div className={`overflow-x-auto border ${ct.cardBorder} rounded-xl mb-4 scrollbar-thin`} id="disease-list-table-wrapper">
-              <table className="w-full text-left border-collapse min-w-[500px] md:min-w-full" id="disease-list-table">
-                <thead>
-                  <tr className={`${ct.subSectionBg} border-b ${ct.cardBorder} text-[9px] md:text-[10px] font-bold ${ct.subHeader} uppercase tracking-wider`}>
-                    <th className="text-left px-3 md:px-4 py-2.5">Disease Name</th>
-                    <th className="px-2 md:px-3 py-2.5 text-center">New Patients</th>
-                    <th className="px-2 md:px-3 py-2.5 text-center">Old Patients</th>
-                    <th className="px-2 md:px-3 py-2.5 text-center">Total</th>
-                    <th className="px-3 md:px-4 py-2.5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {diseaseLogs.length === 0 ? (
-                    <tr id="empty-diseases-placeholder">
-                      <td colSpan={5} className="text-center py-6 text-[11px] md:text-xs text-slate-400 font-medium italic bg-slate-50/20 px-4">
-                        No disease-wise records entered for today yet. Use the selector form above to fill the patient breakdown.
-                      </td>
-                    </tr>
-                  ) : (
-                    diseaseLogs.map((log, idx) => {
-                      const rowTotal = Number(log.opd_male_new || 0) + Number(log.opd_female_new || 0) + Number(log.opd_male_old || 0) + Number(log.opd_female_old || 0);
-                      return (
-                        <tr key={log.diseaseId || idx} className={`border-b ${ct.cardBorder} ${ct.rowHighlightBg} text-xs transition-colors`} id={`disease-row-${log.diseaseId}`}>
-                          <td className="px-3 md:px-4 py-2.5 font-semibold text-slate-700 whitespace-normal break-words max-w-[180px] md:max-w-none">{log.diseaseName}</td>
-                          <td className="px-2 md:px-3 py-2.5 text-center text-emerald-700 font-bold">
-                            <span className="block text-[10px] md:text-[11px]">M: {log.opd_male_new || 0}</span>
-                            <span className="block text-[10px] md:text-[11px] text-pink-700">F: {log.opd_female_new || 0}</span>
-                          </td>
-                          <td className="px-2 md:px-3 py-2.5 text-center text-slate-600 font-bold">
-                            <span className="block text-[10px] md:text-[11px]">M: {log.opd_male_old || 0}</span>
-                            <span className="block text-[10px] md:text-[11px] text-pink-700">F: {log.opd_female_old || 0}</span>
-                          </td>
-                          <td className={`px-2 md:px-3 py-2.5 text-center font-bold text-[11px] md:text-xs ${ct.headerText} ${ct.accentBg}`}>{rowTotal}</td>
-                          <td className="px-3 md:px-4 py-2.5 text-right flex items-center justify-end gap-0.5 md:gap-1">
-                            <button
-                              type="button"
-                              disabled={isLocked}
-                              onClick={() => handleEditDiseaseLog(log)}
-                              className={`text-slate-400 hover:${ct.accentText} p-1 rounded-lg ${ct.rowHighlightBg} transition-colors disabled:opacity-40`}
-                              title="Edit disease entry"
-                              id={`edit-disease-row-${log.diseaseId}`}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isLocked}
-                              onClick={() => handleRemoveDiseaseLog(idx)}
-                              className="text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition-colors disabled:opacity-40"
-                              title="Remove row"
-                              id={`delete-disease-row-${log.diseaseId}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
 
             {/* Gender-wise OPD Registration Breakdown Section */}
             <div className={`${ct.subSectionBg} border rounded-xl p-5 mb-4`} id="gender-opd-breakdown-section">
@@ -1705,7 +1770,6 @@ export default function CalendarEntry({
                 </div>
               </div>
             </div>
-          </div>
             
           {/* IPD Admissions Breakdown */}
 
