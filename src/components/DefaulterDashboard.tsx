@@ -29,7 +29,7 @@ export default function DefaulterDashboard({ user, onSuccessToast }: DefaulterDa
   const ct = getComponentTheme(user.role);
   const [month, setMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [defaulters, setDefaulters] = useState<any[]>([]);
-  const [totalHospitalsCount, setTotalHospitalsCount] = useState<number>(4);
+  const [totalHospitalsCount, setTotalHospitalsCount] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [nudgingId, setNudgingId] = useState<string | null>(null);
   const [isScheduling, setIsScheduling] = useState(false);

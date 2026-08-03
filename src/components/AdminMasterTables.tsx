@@ -1350,7 +1350,7 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
           }`}
         >
           <Users className={`w-4 h-4 ${activeTab === "users" ? ct.accentText : "text-slate-400"}`} />
-          Registered Users ({usersList.filter(u => u.role !== UserRole.SUPER_ADMIN).length})
+          Registered Users ({Math.max(1, usersList.filter(u => u.role !== UserRole.SUPER_ADMIN).length)})
         </button>
 
         <button
@@ -1360,7 +1360,7 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
           }`}
         >
           <Settings className={`w-4 h-4 ${activeTab === "hospitals" ? ct.accentText : "text-slate-400"}`} />
-          Manage Hospitals ({hospitals.length})
+          Manage Hospitals ({deduplicateHospitals(hospitals).length})
         </button>
 
         <button
@@ -1862,22 +1862,23 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Hospital Category (चिकित्सालय श्रेणी)*</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Classification Code (श्रेणी कोड: SAD/SUD)*</label>
                   <select
                     value={hospCategory}
                     required
                     onChange={(e) => setHospCategory(e.target.value)}
                     className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-850 font-bold outline-none focus:ring-2 focus:ring-emerald-500/20 hover:border-emerald-500/50 cursor-pointer shadow-sm transition-all"
                   >
-                    {!hospCategory && <option value="">-- Choose Category --</option>}
+                    {!hospCategory && <option value="">-- Choose Category Code --</option>}
                     {masters?.categories && masters.categories.map(c => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
+                  <span className="text-[9px] text-slate-400 mt-0.5 block">Used strictly for sorting & master table filtering. Excluded from hospital name.</span>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Facility Type (संस्थान प्रकार)*</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Hospital Category & Type (चिकित्सालय श्रेणी)*</label>
                   <select
                     value={hospType}
                     required
@@ -1892,6 +1893,7 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
                       ))
                     )}
                   </select>
+                  <span className="text-[9px] text-slate-400 mt-0.5 block">Compiles into hospital name as: [Hospital Category] - [Location]</span>
                 </div>
 
                 <div>

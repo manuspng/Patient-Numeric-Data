@@ -104,7 +104,18 @@ const INITIAL_MOCK_DB = {
     }
   ],
   hospitalDropdownOptions: [] as any[],
-  users: [] as any[],
+  users: [
+    {
+      id: "user-jhankat",
+      name: "Dr Manvinder Pal Singh",
+      email: "usn.jhankat@uttarakhandayurved.co.in",
+      role: UserRole.HOSPITAL_USER,
+      hospitalId: "hosp-d1dgsvb7d",
+      phone: "+919455959592",
+      designation: "Medical Officer In-Charge",
+      isWhitelisted: true
+    }
+  ] as any[],
   dailyReports: [] as any[],
   auditLogs: [
     { id: "audit-init", userId: "user-manu", userEmail: "manu.spng@gmail.com", userName: "Dr. Manu Sharma", action: "INIT", tableName: "System", recordId: "0", details: "Client-side simulation database initialized with Vercel support.", timestamp: new Date().toISOString() }
@@ -222,7 +233,7 @@ const INITIAL_MOCK_DB = {
 
 let memoryDBFallback: any = null;
 
-const MOCK_DB_VERSION = "v8-clean-single-facility-standard";
+const MOCK_DB_VERSION = "v9-clean-single-facility-and-user";
 
 const getLocalMockDB = () => {
   // 1. If we have an in-memory state from this session, always use it
@@ -1311,9 +1322,16 @@ const customFetch = async function (input: any, init?: any) {
       }
       else if (pathname === "/api/mpr/defaulters") {
         const month = parsedUrl.searchParams.get("month");
-        const activeHospitals = db.hospitals;
-        const defaulters = activeHospitals.map((h: any) => {
-          const count = db.dailyReports.filter((r: any) => r && r.hospitalId === h.id && (r.recordDate || "").startsWith(month || "")).length;
+        const uniqueHospMap = new Map();
+        (db.hospitals || []).forEach((h: any) => {
+          if (!h) return;
+          const key = (h.id || h.code || h.contactEmail || h.name || "").trim().toLowerCase();
+          if (key && !uniqueHospMap.has(key)) uniqueHospMap.set(key, h);
+        });
+        const activeHospitals = Array.from(uniqueHospMap.values());
+        
+        const defaultersList = activeHospitals.map((h: any) => {
+          const count = (db.dailyReports || []).filter((r: any) => r && r.hospitalId === h.id && (r.recordDate || "").startsWith(month || "")).length;
           return {
             hospitalId: h.id,
             hospitalName: h.name,
@@ -1322,7 +1340,11 @@ const customFetch = async function (input: any, init?: any) {
             isDefaulter: count === 0
           };
         });
-        responseData = defaulters;
+        responseData = {
+          success: true,
+          defaulters: defaultersList.filter((d: any) => d.isDefaulter),
+          totalHospitalsCount: activeHospitals.length
+        };
       }
       else if (pathname === "/api/mpr/nudge" || pathname === "/api/notifications/trigger-daily-schedule") {
         responseData = { success: true };
