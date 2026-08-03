@@ -796,14 +796,14 @@ export default function CalendarEntry({
         return prevLogs.filter(l => l.diseaseId !== diseaseId);
       }
 
-      const totalMalePrev = (existingLog.opd_male_new || 0) + (existingLog.opd_male_old || 0);
+      const totalFemalePrev = (existingLog.opd_female_new || 0) + (existingLog.opd_female_old || 0);
       const prevTotal = (existingLog.opd_male_new || 0) + (existingLog.opd_female_new || 0) + (existingLog.opd_male_old || 0) + (existingLog.opd_female_old || 0);
-      const maleRatio = prevTotal > 0 ? (totalMalePrev / prevTotal) : 0.5;
+      const femaleRatio = prevTotal > 0 ? (totalFemalePrev / prevTotal) : 1.0;
 
-      const opd_male_new = Math.round(currentNew * maleRatio);
-      const opd_female_new = currentNew - opd_male_new;
-      const opd_male_old = Math.round(currentOld * maleRatio);
-      const opd_female_old = currentOld - opd_male_old;
+      const opd_female_new = Math.round(currentNew * femaleRatio);
+      const opd_male_new = currentNew - opd_female_new;
+      const opd_female_old = Math.round(currentOld * femaleRatio);
+      const opd_male_old = currentOld - opd_female_old;
 
       const updatedLog: DiseaseOPDLog = {
         ...existingLog,
@@ -1726,7 +1726,7 @@ export default function CalendarEntry({
                       2. Cumulative Daily Gender Distribution
                     </h5>
                     <span className="text-[11px] text-slate-500 font-medium block">
-                      Overall daily gender breakdown. Male counts entered here; Female counts auto-calculated from disease totals above.
+                      Overall daily gender breakdown. Female counts entered here; Male counts auto-calculated from disease totals above.
                     </span>
                   </div>
                   <div className="bg-indigo-50 text-indigo-900 border border-indigo-200 font-extrabold text-xs px-3 py-1 rounded-full shadow-3xs text-center font-mono">
@@ -1760,45 +1760,45 @@ export default function CalendarEntry({
                         />
                       </div>
 
-                      {/* Male New Patients (Number Input) */}
+                      {/* Female New Patients (Number Input) */}
                       <div className="relative">
-                        <label className="block text-[10px] font-bold text-slate-600 mb-1 whitespace-nowrap truncate" title="Male New*">Male New*</label>
+                        <label className="block text-[10px] font-bold text-pink-700 mb-1 whitespace-nowrap truncate" title="Female New*">Female New*</label>
                         <input
                           type="number"
                           disabled={isLocked || totalNewOPD === 0}
                           min="0"
                           max={totalNewOPD}
-                          value={matrix.opd_male_new || ""}
+                          value={matrix.opd_female_new || ""}
                           placeholder="0"
                           onChange={(e) => {
                             const val = Math.max(0, Number(e.target.value));
-                            handleMatrixChange("opd_male_new", val);
+                            handleMatrixChange("opd_female_new", val);
                           }}
                           className={`w-full border rounded-lg px-2.5 py-1.5 text-xs text-center font-bold outline-none transition-all ${
-                            (matrix.opd_male_new || 0) > totalNewOPD && totalNewOPD > 0
+                            (matrix.opd_female_new || 0) > totalNewOPD && totalNewOPD > 0
                               ? "bg-rose-50 border-rose-500 text-rose-700 ring-2 ring-rose-300 animate-pulse font-black"
-                              : "bg-white border-slate-200 text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                              : "bg-white border-slate-200 text-pink-950 focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500"
                           }`}
                         />
                       </div>
 
-                      {/* Female New Patients (Readonly Auto-computed) */}
+                      {/* Male New Patients (Readonly Auto-computed) */}
                       <div>
-                        <label className="block text-[10px] font-bold text-pink-700 mb-1 whitespace-nowrap truncate" title="Female New (Auto)">Female New (Auto)</label>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1 whitespace-nowrap truncate" title="Male New (Auto)">Male New (Auto)</label>
                         <input
                           type="number"
                           readOnly={true}
                           disabled={true}
-                          value={Math.max(0, totalNewOPD - (matrix.opd_male_new || 0))}
-                          className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-center font-extrabold text-pink-900 cursor-not-allowed shadow-inner"
+                          value={Math.max(0, totalNewOPD - (matrix.opd_female_new || 0))}
+                          className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-center font-extrabold text-slate-800 cursor-not-allowed shadow-inner"
                         />
                       </div>
                     </div>
 
-                    {(matrix.opd_male_new || 0) > totalNewOPD && totalNewOPD > 0 && (
+                    {(matrix.opd_female_new || 0) > totalNewOPD && totalNewOPD > 0 && (
                       <p className="text-[10px] font-bold text-rose-600 flex items-center gap-1 bg-rose-50 p-1.5 rounded-md border border-rose-200">
                         <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                        Male New Patients ({matrix.opd_male_new}) cannot exceed Total New Patients ({totalNewOPD})!
+                        Female New Patients ({matrix.opd_female_new}) cannot exceed Total New Patients ({totalNewOPD})!
                       </p>
                     )}
                   </div>
@@ -1828,45 +1828,45 @@ export default function CalendarEntry({
                         />
                       </div>
 
-                      {/* Male Old Patients (Number Input) */}
+                      {/* Female Old Patients (Number Input) */}
                       <div className="relative">
-                        <label className="block text-[10px] font-bold text-slate-600 mb-1 whitespace-nowrap truncate" title="Male Old*">Male Old*</label>
+                        <label className="block text-[10px] font-bold text-pink-700 mb-1 whitespace-nowrap truncate" title="Female Old*">Female Old*</label>
                         <input
                           type="number"
                           disabled={isLocked || totalOldOPD === 0}
                           min="0"
                           max={totalOldOPD}
-                          value={matrix.opd_male_old || ""}
+                          value={matrix.opd_female_old || ""}
                           placeholder="0"
                           onChange={(e) => {
                             const val = Math.max(0, Number(e.target.value));
-                            handleMatrixChange("opd_male_old", val);
+                            handleMatrixChange("opd_female_old", val);
                           }}
                           className={`w-full border rounded-lg px-2.5 py-1.5 text-xs text-center font-bold outline-none transition-all ${
-                            (matrix.opd_male_old || 0) > totalOldOPD && totalOldOPD > 0
+                            (matrix.opd_female_old || 0) > totalOldOPD && totalOldOPD > 0
                               ? "bg-rose-50 border-rose-500 text-rose-700 ring-2 ring-rose-300 animate-pulse font-black"
-                              : "bg-white border-slate-200 text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                              : "bg-white border-slate-200 text-pink-950 focus:ring-2 focus:ring-pink-500/30 focus:border-pink-500"
                           }`}
                         />
                       </div>
 
-                      {/* Female Old Patients (Readonly Auto-computed) */}
+                      {/* Male Old Patients (Readonly Auto-computed) */}
                       <div>
-                        <label className="block text-[10px] font-bold text-pink-700 mb-1 whitespace-nowrap truncate" title="Female Old (Auto)">Female Old (Auto)</label>
+                        <label className="block text-[10px] font-bold text-slate-600 mb-1 whitespace-nowrap truncate" title="Male Old (Auto)">Male Old (Auto)</label>
                         <input
                           type="number"
                           readOnly={true}
                           disabled={true}
-                          value={Math.max(0, totalOldOPD - (matrix.opd_male_old || 0))}
-                          className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-center font-extrabold text-pink-900 cursor-not-allowed shadow-inner"
+                          value={Math.max(0, totalOldOPD - (matrix.opd_female_old || 0))}
+                          className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-center font-extrabold text-slate-800 cursor-not-allowed shadow-inner"
                         />
                       </div>
                     </div>
 
-                    {(matrix.opd_male_old || 0) > totalOldOPD && totalOldOPD > 0 && (
+                    {(matrix.opd_female_old || 0) > totalOldOPD && totalOldOPD > 0 && (
                       <p className="text-[10px] font-bold text-rose-600 flex items-center gap-1 bg-rose-50 p-1.5 rounded-md border border-rose-200">
                         <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                        Male Old Patients ({matrix.opd_male_old}) cannot exceed Total Old Patients ({totalOldOPD})!
+                        Female Old Patients ({matrix.opd_female_old}) cannot exceed Total Old Patients ({totalOldOPD})!
                       </p>
                     )}
                   </div>
