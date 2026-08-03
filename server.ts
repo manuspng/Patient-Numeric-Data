@@ -2212,8 +2212,8 @@ app.post("/api/admin/hospitals/save", (req, res) => {
     return res.status(400).json({ success: false, message: "Hospital In-charge name is mandatory to complete hospital profile registration." });
   }
 
-  // Force hospital name to represent "facility category (or type) + location"
-  const activeSelection = (hospital.category || hospital.type || "").trim();
+  // Force hospital name to represent "facility category + location"
+  const activeSelection = (hospital.category || "राजकीय आयुर्वेदिक चिकित्सालय").trim();
   let computedName = activeSelection;
   if (activeSelection && hospital.location) {
     const loc = hospital.location.trim();
@@ -2237,7 +2237,7 @@ app.post("/api/admin/hospitals/save", (req, res) => {
   if (target) {
     // Check if code was changed and is already taken
     if (target.code !== hospital.code) {
-      const codeExists = db.hospitals.find(h => h.code === hospital.code);
+      const codeExists = db.hospitals.find(h => h.code === hospital.code && h.id !== hospital.id);
       if (codeExists) {
         return res.status(400).json({ success: false, message: `Hospital code ${hospital.code} is already registered.` });
       }
@@ -2257,10 +2257,14 @@ app.post("/api/admin/hospitals/save", (req, res) => {
     target.category = hospital.category || "";
     actionStr = `Updated hospital: ${computedName} (${hospital.code})`;
   } else {
-    // Check if code is already taken
-    const codeExists = db.hospitals.find(h => h.code === hospital.code);
-    if (codeExists) {
-      return res.status(400).json({ success: false, message: `Hospital code ${hospital.code} is already registered.` });
+    // Check if code, email, or name is already taken
+    const duplicate = db.hospitals.find(h => 
+      (h.code && h.code.toUpperCase().trim() === hospital.code.toUpperCase().trim()) ||
+      (h.contactEmail && hospital.contactEmail && h.contactEmail.toLowerCase().trim() === hospital.contactEmail.toLowerCase().trim()) ||
+      (h.name && h.name.toLowerCase().trim() === computedName.toLowerCase().trim())
+    );
+    if (duplicate) {
+      return res.status(400).json({ success: false, message: `⚠️ Warning: A hospital with Code (${hospital.code}), Email (${hospital.contactEmail}), or Name (${computedName}) is ALREADY registered!` });
     }
     // Create new
     target = {

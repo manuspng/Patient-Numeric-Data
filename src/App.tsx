@@ -534,16 +534,28 @@ const customFetch = async function (input: any, init?: any) {
       } 
       else if (pathname === "/api/auth/request-register") {
         const { email, name, role, hospitalId, phone, password } = body || {};
-        const request = {
-          id: "req-" + Math.random().toString(36).substring(2, 11),
-          email, name, role, hospitalId, phone, password,
-          status: "PENDING",
-          createdAt: new Date().toISOString()
-        };
-        db.registrationRequests = db.registrationRequests || [];
-        db.registrationRequests.push(request);
-        saveLocalMockDB(db);
-        responseData = { success: true };
+        const searchEmail = (email || "").toLowerCase().trim();
+        const existingUser = (db.users || []).find((u: any) => u.email.toLowerCase().trim() === searchEmail);
+        const existingReq = (db.registrationRequests || []).find((r: any) => r.email.toLowerCase().trim() === searchEmail && r.status === "PENDING");
+        
+        if (existingUser) {
+          statusCode = 400;
+          responseData = { success: false, message: `⚠️ Warning: A user account with email "${email}" is ALREADY registered in the system!` };
+        } else if (existingReq) {
+          statusCode = 400;
+          responseData = { success: false, message: `⚠️ Warning: A registration request for email "${email}" is already pending approval!` };
+        } else {
+          const request = {
+            id: "req-" + Math.random().toString(36).substring(2, 11),
+            email, name, role, hospitalId, phone, password,
+            status: "PENDING",
+            createdAt: new Date().toISOString()
+          };
+          db.registrationRequests = db.registrationRequests || [];
+          db.registrationRequests.push(request);
+          saveLocalMockDB(db);
+          responseData = { success: true };
+        }
       }
       else if (pathname === "/api/admin/profile/update") {
         const { email, name, designation, contact, phone } = body || {};
@@ -582,7 +594,15 @@ const customFetch = async function (input: any, init?: any) {
         responseData = { success: true, user: userProfile };
       }
       else if (pathname === "/api/hospitals") {
-        responseData = db.hospitals;
+        const uniqueHospitalsMap = new Map();
+        (db.hospitals || []).forEach((h: any) => {
+          if (!h) return;
+          const key = (h.id || h.code || h.contactEmail || h.name || "").trim().toLowerCase();
+          if (key && !uniqueHospitalsMap.has(key)) {
+            uniqueHospitalsMap.set(key, h);
+          }
+        });
+        responseData = Array.from(uniqueHospitalsMap.values());
       }
       else if (pathname === "/api/hospitals/options") {
         responseData = db.hospitalDropdownOptions || [];
@@ -715,16 +735,34 @@ const customFetch = async function (input: any, init?: any) {
         responseData = { success: true };
       }
       else if (pathname === "/api/admin/hospitals/save") {
-        const h = body;
-        let existing = db.hospitals.find((item: any) => item.id === h.id || item.code === h.code);
-        if (existing) {
-          Object.assign(existing, h);
-        } else {
-          h.id = h.id || "hosp-" + Math.random().toString(36).substring(2, 11);
-          db.hospitals.push(h);
+        const { hospital: h } = body || {};
+        if (h) {
+          const cat = (h.category || h.type || "राजकीय आयुर्वेदिक चिकित्सालय").trim();
+          const loc = (h.location || "").trim();
+          const computedName = loc ? `${cat} - ${loc}` : cat;
+          h.name = computedName;
+
+          let existing = db.hospitals.find((item: any) => item.id === h.id);
+          if (existing) {
+            Object.assign(existing, h);
+          } else {
+            const duplicate = (db.hospitals || []).find((item: any) => 
+              (item.code && item.code.toUpperCase().trim() === (h.code || "").toUpperCase().trim()) ||
+              (item.contactEmail && h.contactEmail && item.contactEmail.toLowerCase().trim() === h.contactEmail.toLowerCase().trim()) ||
+              (item.name && item.name.toLowerCase().trim() === computedName.toLowerCase().trim())
+            );
+            if (duplicate) {
+              statusCode = 400;
+              responseData = { success: false, message: `⚠️ Warning: A hospital with this Code (${h.code}), Email (${h.contactEmail}), or Name (${computedName}) is ALREADY registered!` };
+            } else {
+              h.id = h.id || "hosp-" + Math.random().toString(36).substring(2, 11);
+              db.hospitals.push(h);
+              saveLocalMockDB(db);
+              responseData = { success: true, message: `Hospital "${computedName}" registered successfully.` };
+            }
+          }
+          if (statusCode === 200) saveLocalMockDB(db);
         }
-        saveLocalMockDB(db);
-        responseData = { success: true };
       }
       else if (pathname === "/api/admin/hospitals/delete") {
         const { hospitalId } = body || {};

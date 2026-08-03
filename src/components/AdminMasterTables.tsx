@@ -630,7 +630,7 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
       setHospName("");
       setHospCode("");
       setHospType(masters.hospitalTypes[0] || "राजकीय आयुर्वेदिक चिकित्सालय");
-      setHospCategory(masters.categories[0] || "");
+      setHospCategory(masters.categories[0] || "राजकीय आयुर्वेदिक चिकित्सालय");
       setHospAddress("");
       setHospEmail(masters.emailIds[0] || "");
       setHospPhone("");
@@ -645,7 +645,7 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
         setHospName(h.name);
         setHospCode(h.code);
         setHospType(h.type || masters.hospitalTypes[0] || "राजकीय आयुर्वेदिक चिकित्सालय");
-        setHospCategory((h as any).category || masters.categories[0] || "");
+        setHospCategory((h as any).category || masters.categories[0] || "राजकीय आयुर्वेदिक चिकित्सालय");
         setHospAddress(h.address || "");
         setHospEmail(h.contactEmail || masters.emailIds[0] || "");
         setHospPhone(h.contactPhone || "");
@@ -666,6 +666,26 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
     }
     if (!hospIncharge.trim()) {
       alert("⚠️ Hospital In-charge Name is mandatory to complete hospital profile registration.");
+      return;
+    }
+
+    const formattedEmail = (hospEmail.trim() === "manu.spng@gmail.com" || hospEmail.trim() === "manu.spng")
+      ? "manu.spng@gmail.com"
+      : hospEmail.trim().includes("@")
+        ? hospEmail.trim()
+        : `${hospEmail.trim()}@uttarakhandayurved.co.in`;
+
+    // Restrict duplicate hospital or credential email registration
+    const duplicate = hospitals.find(h => 
+      h.id !== selectedHospId && (
+        (h.contactEmail && h.contactEmail.toLowerCase().trim() === formattedEmail.toLowerCase().trim()) ||
+        (h.code && h.code.toUpperCase().trim() === hospCode.trim().toUpperCase()) ||
+        (h.name && h.name.toLowerCase().trim() === hospName.trim().toLowerCase())
+      )
+    );
+
+    if (duplicate) {
+      alert(`⚠️ Duplicate Registration Warning:\nA medical facility with this Email (${formattedEmail}), Code (${hospCode}), or Name (${hospName}) is ALREADY registered!\n\nDuplicate registrations are strictly restricted in the system.`);
       return;
     }
 
@@ -1108,6 +1128,19 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
     }
   };
 
+  const deduplicateHospitals = (list: Hospital[]) => {
+    if (!Array.isArray(list)) return [];
+    const map = new Map<string, Hospital>();
+    list.forEach(h => {
+      if (!h) return;
+      const key = (h.id || h.code || h.contactEmail || h.name || "").trim().toLowerCase();
+      if (key && !map.has(key)) {
+        map.set(key, h);
+      }
+    });
+    return Array.from(map.values());
+  };
+
   const fetchUsers = async () => {
     try {
       const res = await fetch("/api/admin/users");
@@ -1120,7 +1153,7 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
     try {
       const res = await fetch("/api/hospitals");
       const d = await res.json();
-      setHospitals(d);
+      setHospitals(deduplicateHospitals(d));
     } catch (e) { console.error(e); }
   };
 
@@ -1150,6 +1183,12 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
       : trimmedEmail.includes("@") 
         ? trimmedEmail 
         : `${trimmedEmail}@uttarakhandayurved.co.in`;
+
+    const existingUser = usersList.find(u => u.email?.toLowerCase().trim() === finalEmail.toLowerCase().trim());
+    if (existingUser && existingUser.isWhitelisted) {
+      alert(`⚠️ Duplicate User Registration Warning:\nA user account with credential email "${finalEmail}" is ALREADY registered in the system!\n\nDuplicate user registrations are strictly restricted.`);
+      return;
+    }
 
     try {
       setIsWhitelisting(true);
