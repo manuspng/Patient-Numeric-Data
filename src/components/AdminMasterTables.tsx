@@ -630,30 +630,33 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
     if (id === "new") {
       setHospName("");
       setHospCode("");
-      setHospType(masters.hospitalTypes[0] || "राजकीय आयुर्वेदिक चिकित्सालय");
-      setHospCategory(masters.categories[0] || "राजकीय आयुर्वेदिक चिकित्सालय");
+      setHospType(masters?.hospitalTypes?.[0] || "राजकीय आयुर्वेदिक चिकित्सालय");
+      setHospCategory(masters?.categories?.[0] || "SAD");
       setHospAddress("");
-      setHospEmail(masters.emailIds[0] || "");
+      setHospEmail(masters?.emailIds?.[0] || "");
       setHospPhone("");
-      setHospStream(masters.streams[0] || "Ayurved");
-      setHospLocation(masters.locations[0] || "");
-      setHospBlock(masters.blocks[0] || "");
-      setHospDistrict(masters.districts[0] || "उधम सिंह नगर");
+      setHospStream(masters?.streams?.[0] || "Ayurved");
+      setHospLocation(masters?.locations?.[0] || "");
+      setHospBlock(masters?.blocks?.[0] || "");
+      setHospDistrict(masters?.districts?.[0] || "उधम सिंह नगर");
       setHospIncharge("");
     } else {
       const h = currentHospitalsList.find(x => x.id === id);
       if (h) {
         setHospName(h.name);
         setHospCode(h.code);
-        setHospType(h.type || masters.hospitalTypes[0] || "राजकीय आयुर्वेदिक चिकित्सालय");
-        setHospCategory((h as any).category || masters.categories[0] || "राजकीय आयुर्वेदिक चिकित्सालय");
+        const resolvedType = (h.type && h.type !== "SAD" && h.type !== "SUD" && h.type !== "AAM" && h.type !== "MOCH")
+          ? h.type
+          : (h.name ? h.name.split(" - ")[0] : "राजकीय आयुर्वेदिक चिकित्सालय");
+        setHospType(resolvedType);
+        setHospCategory((h as any).category || masters?.categories?.[0] || "SAD");
         setHospAddress(h.address || "");
-        setHospEmail(h.contactEmail || masters.emailIds[0] || "");
+        setHospEmail(h.contactEmail || masters?.emailIds?.[0] || "");
         setHospPhone(h.contactPhone || "");
-        setHospStream((h as any).stream || masters.streams[0] || "Ayurved");
-        setHospLocation((h as any).location || masters.locations[0] || "");
-        setHospBlock((h as any).block || masters.blocks[0] || "");
-        setHospDistrict((h as any).district || masters.districts[0] || "उधम सिंह नगर");
+        setHospStream((h as any).stream || masters?.streams?.[0] || "Ayurved");
+        setHospLocation((h as any).location || masters?.locations?.[0] || "");
+        setHospBlock((h as any).block || masters?.blocks?.[0] || "");
+        setHospDistrict((h as any).district || masters?.districts?.[0] || "उधम सिंह नगर");
         setHospIncharge(h.incharge || "");
       }
     }
@@ -1002,10 +1005,17 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
     }
   }, [masters]);
 
-  // Keep hospital name, code, and email synced strictly from Facility Type (hospType) + Location (hospLocation)
+  // Keep hospital name synced strictly from Facility Type (hospType) + Location (hospLocation)
   useEffect(() => {
     let computedName = "";
-    const activeType = hospType ? hospType.trim() : "";
+    let activeType = hospType ? hospType.trim() : "राजकीय आयुर्वेदिक चिकित्सालय";
+    if (activeType === "SAD" || activeType === "SUD" || activeType === "AAM" || activeType === "MOCH") {
+      if (activeType === "SUD") activeType = "राजकीय यूनानी चिकित्सालय";
+      else if (activeType === "AAM") activeType = "आयुष्मान आरोग्य मंदिर";
+      else if (activeType === "MOCH") activeType = "अति प्राथमिक स्वास्थ केंद्र - आयुष विंग (MOCH)";
+      else activeType = "राजकीय आयुर्वेदिक चिकित्सालय";
+    }
+
     const loc = hospLocation ? hospLocation.trim() : "";
 
     if (activeType && loc) {
@@ -1016,10 +1026,12 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
       computedName = loc;
     }
     setHospName(computedName);
+  }, [hospType, hospLocation]);
 
-    // Auto generate unique code if it's a new hospital using Facility Type abbreviation & Sequence
+  // Auto generate unique code if it's a new hospital using Facility Type abbreviation & Sequence
+  useEffect(() => {
     if (selectedHospId === "new") {
-      const prefix = getFacilityTypeAbbreviation(hospType);
+      const prefix = getFacilityTypeAbbreviation(hospCategory || hospType);
       const existingWithPrefix = hospitals.filter(h => h.code && h.code.startsWith(prefix + "-"));
       let maxSeq = 0;
       existingWithPrefix.forEach(h => {
@@ -1034,13 +1046,15 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
       const seqStr = nextSeq.toString().padStart(3, '0');
       setHospCode(`${prefix}-${seqStr}`);
     }
+  }, [selectedHospId, hospCategory, hospType, hospitals]);
 
-    // Look up in the synced google sheet list of hospitals
+  // Auto-sync email and incharge metadata based on selected location and computed name
+  useEffect(() => {
     let syncedEmail = "";
     let syncedIncharge = "";
     
-    if (computedName) {
-      const matched = hospitals.find(h => h.name.trim().toLowerCase() === computedName.trim().toLowerCase());
+    if (hospName) {
+      const matched = hospitals.find(h => h.name.trim().toLowerCase() === hospName.trim().toLowerCase());
       if (matched) {
         if (matched.contactEmail) {
           syncedEmail = matched.contactEmail.trim();
@@ -1074,7 +1088,7 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
         ...(masters?.emailIds || []),
         ...hospitals.map(h => h.contactEmail).filter(Boolean)
       ];
-      const sortedEmails = sortEmailsByMatchingAlias(allAvailableEmails, hospLocation, computedName);
+      const sortedEmails = sortEmailsByMatchingAlias(allAvailableEmails, hospLocation, hospName);
       if (sortedEmails.length > 0) {
         let topEmail = sortedEmails[0];
         if (topEmail.endsWith("@uttarakhandayurved.co.in")) {
@@ -1093,7 +1107,7 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
     if (syncedIncharge) {
       setHospIncharge(syncedIncharge);
     }
-  }, [hospCategory, hospType, hospLocation, hospitals, selectedHospId]);
+  }, [hospName, hospLocation, hospitals, masters]);
 
   const fetchRequests = async () => {
     try {
