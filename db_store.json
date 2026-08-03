@@ -1,42 +1,42 @@
 {
   "hospitals": [
     {
-      "incharge": "Dr Manvinder Pal Singh",
-      "contactEmail": "usn.jhankat@uttarakhandayurved.co.in",
-      "district": "उधम सिंह नगर",
-      "type": "राजकीय आयुर्वेदिक चिकित्सालय",
+      "contactPhone": "9455959592",
+      "code": "00",
+      "block": "Khatima",
       "stream": "Ayurved",
       "id": "hosp-d1dgsvb7d",
-      "contactPhone": "9455959592",
-      "location": "झनकट",
-      "code": "00",
+      "district": "उधम सिंह नगर",
+      "type": "राजकीय आयुर्वेदिक चिकित्सालय",
+      "incharge": "Dr Manvinder Pal Singh",
       "address": "jhankat, khatima, us nagar",
+      "contactEmail": "usn.jhankat@uttarakhandayurved.co.in",
       "name": "राजकीय आयुर्वेदिक चिकित्सालय झनकट",
       "isActive": true,
-      "block": "Khatima"
+      "location": "झनकट"
     }
   ],
   "users": [
     {
-      "role": "SUPER_ADMIN",
-      "email": "manu.spng@gmail.com",
       "name": "Dr MP Singh",
-      "designation": "Super Admin",
-      "phone": "+919455959592",
       "id": "user-manu",
       "isWhitelisted": true,
+      "phone": "+919455959592",
+      "email": "manu.spng@gmail.com",
+      "designation": "Super Admin",
+      "password": "admin123",
       "contact": "+919455959592",
-      "password": "admin123"
+      "role": "SUPER_ADMIN"
     },
     {
       "hospitalId": "hosp-d1dgsvb7d",
-      "phone": "9455959592",
-      "id": "user-wms9utw83",
       "email": "usn.jhankat@uttarakhandayurved.co.in",
       "name": "Dr Manvinder Pal Singh",
+      "id": "user-wms9utw83",
+      "role": "HOSPITAL_USER",
       "isWhitelisted": true,
       "password": "221280",
-      "role": "HOSPITAL_USER"
+      "phone": "9455959592"
     }
   ],
   "dailyReports": [
@@ -11802,9 +11802,189 @@
         "hepatitis_c": 0,
         "dengue": 0
       }
+    },
+    {
+      "id": "rep-hosp-d1dgsvb7d-2026-08-01",
+      "hospitalId": "hosp-d1dgsvb7d",
+      "recordDate": "2026-08-01",
+      "submittedAt": "2026-08-03T15:23:46.370Z",
+      "submittedBy": "usn.jhankat@uttarakhandayurved.co.in",
+      "patientMatrix": {
+        "opd_male_new": 2,
+        "opd_male_old": 1,
+        "opd_female_new": 2,
+        "opd_female_old": 3,
+        "opd_child_new": 0,
+        "opd_child_old": 0,
+        "opd_elderly_new": 0,
+        "opd_elderly_old": 0,
+        "ipd_admissions": 13,
+        "ipd_male_new": 2,
+        "ipd_male_old": 1,
+        "ipd_female_new": 8,
+        "ipd_female_old": 2,
+        "ipd_child_new": 0,
+        "ipd_child_old": 0,
+        "ipd_bed_occupancy_percentage": 0,
+        "panchkarma_male": 7,
+        "panchkarma_female": 2,
+        "panchkarma_child": 0,
+        "panchkarma_elderly": 0,
+        "levy_charges": 120,
+        "aadhaar_seeded_count": 3,
+        "mobile_seeded_count": 6
+      },
+      "investigationsLab": {
+        "hemoglobin": 0,
+        "blood_sugar": 0,
+        "urine_sugar": 0,
+        "urine_albumin": 0,
+        "malaria": 0,
+        "dengue": 0,
+        "typhoid": 0,
+        "hepatitis_a": 0,
+        "hepatitis_b": 0,
+        "hepatitis_c": 0,
+        "pregnancy_tests": 0
+      },
+      "inventory": [
+        {
+          "kit_type": "Hemoglobin Strips",
+          "opening_balance": 50,
+          "received_qty": 0,
+          "used_qty": 0,
+          "defective_qty": 0,
+          "closing_balance": 50,
+          "low_stock_threshold": 20
+        },
+        {
+          "kit_type": "Blood Sugar Strips",
+          "opening_balance": 50,
+          "received_qty": 0,
+          "used_qty": 0,
+          "defective_qty": 0,
+          "closing_balance": 50,
+          "low_stock_threshold": 30
+        },
+        {
+          "kit_type": "Urine Multiparameter Strips",
+          "opening_balance": 50,
+          "received_qty": 0,
+          "used_qty": 0,
+          "defective_qty": 0,
+          "closing_balance": 50,
+          "low_stock_threshold": 25
+        },
+        {
+          "kit_type": "Malaria Antigen Cards",
+          "opening_balance": 50,
+          "received_qty": 0,
+          "used_qty": 0,
+          "defective_qty": 0,
+          "closing_balance": 50,
+          "low_stock_threshold": 15
+        },
+        {
+          "kit_type": "Dengue Rapid Cards",
+          "opening_balance": 50,
+          "received_qty": 0,
+          "used_qty": 0,
+          "defective_qty": 0,
+          "closing_balance": 50,
+          "low_stock_threshold": 10
+        },
+        {
+          "kit_type": "Typhoid Test Cards",
+          "opening_balance": 50,
+          "received_qty": 0,
+          "used_qty": 0,
+          "defective_qty": 0,
+          "closing_balance": 50,
+          "low_stock_threshold": 15
+        },
+        {
+          "kit_type": "Pregnancy HCG Cassettes",
+          "opening_balance": 50,
+          "received_qty": 0,
+          "used_qty": 0,
+          "defective_qty": 0,
+          "closing_balance": 50,
+          "low_stock_threshold": 12
+        }
+      ],
+      "camps": [],
+      "isLocked": false,
+      "anomalyConfirmed": false,
+      "anomalyFlags": [],
+      "diseaseLogs": [
+        {
+          "diseaseId": "dis-1",
+          "diseaseName": "ज्वर",
+          "opd_male_new": 2,
+          "opd_male_old": 1,
+          "opd_female_new": 2,
+          "opd_female_old": 3,
+          "opd_child_new": 0,
+          "opd_child_old": 0,
+          "opd_elderly_new": 0,
+          "opd_elderly_old": 0
+        }
+      ],
+      "customFieldsData": {
+        "opd_levy_rate": 5,
+        "ipd_levy_rate": 10,
+        "opd_levy": 20,
+        "ipd_levy": 100,
+        "panchkarma_levy": 0,
+        "other_levy": 0
+      }
     }
   ],
   "auditLogs": [
+    {
+      "id": "audit-fynlt92sr",
+      "userId": "user-manu",
+      "userEmail": "manu.spng@gmail.com",
+      "userName": "Dr MP Singh",
+      "action": "LOGIN",
+      "tableName": "User",
+      "recordId": "user-manu",
+      "details": "User logged in successfully via Google Sign-In (Firebase).",
+      "timestamp": "2026-08-03T16:00:56.567Z"
+    },
+    {
+      "id": "audit-zoezcvfrf",
+      "userId": "user-manu",
+      "userEmail": "manu.spng@gmail.com",
+      "userName": "Dr MP Singh",
+      "action": "LOGIN",
+      "tableName": "User",
+      "recordId": "user-manu",
+      "details": "User logged in successfully via Google Sign-In (Firebase).",
+      "timestamp": "2026-08-03T16:00:56.559Z"
+    },
+    {
+      "id": "audit-hchtvsrfe",
+      "userId": "user-wms9utw83",
+      "userEmail": "usn.jhankat@uttarakhandayurved.co.in",
+      "userName": "Dr Manvinder Pal Singh",
+      "action": "UPDATE",
+      "tableName": "DailyReport",
+      "recordId": "rep-hosp-d1dgsvb7d-2026-08-01",
+      "details": "Updated Daily Report for 2026-08-01. Changes: (OPD M/F: 4/0) -> (OPD M/F: 2/2)",
+      "timestamp": "2026-08-03T15:23:46.370Z"
+    },
+    {
+      "id": "audit-3hn0qidou",
+      "userId": "user-wms9utw83",
+      "userEmail": "usn.jhankat@uttarakhandayurved.co.in",
+      "userName": "Dr Manvinder Pal Singh",
+      "action": "CREATE",
+      "tableName": "DailyReport",
+      "recordId": "rep-hosp-d1dgsvb7d-2026-08-01",
+      "details": "Created Daily Report for 2026-08-01. Total OPD: 8",
+      "timestamp": "2026-08-03T15:22:05.212Z"
+    },
     {
       "id": "audit-mwk47g655",
       "userId": "user-wms9utw83",
@@ -12383,14 +12563,14 @@
   "registrationRequests": [
     {
       "phone": "9455959592",
-      "name": "Dr Manvinder Pal Singh",
-      "requestedAt": "2026-07-04T11:54:48.736Z",
-      "id": "req-mrqqg3ek8",
-      "password": "221280",
-      "email": "usn.jhankat@uttarakhandayurved.co.in",
-      "hospitalId": "hosp-d1dgsvb7d",
       "status": "APPROVED",
-      "role": "HOSPITAL_USER"
+      "requestedAt": "2026-07-04T11:54:48.736Z",
+      "email": "usn.jhankat@uttarakhandayurved.co.in",
+      "name": "Dr Manvinder Pal Singh",
+      "role": "HOSPITAL_USER",
+      "hospitalId": "hosp-d1dgsvb7d",
+      "password": "221280",
+      "id": "req-mrqqg3ek8"
     }
   ],
   "hospitalDropdownOptions": [

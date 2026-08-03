@@ -620,7 +620,7 @@ function loadDB(): DBStore {
       contactPhone: "9455959592",
       isActive: true,
       incharge: "Dr Manvinder Pal Singh",
-      block: "Khatima",
+      block: "खटीमा",
       district: "उधम सिंह नगर",
       stream: "Ayurved"
     }

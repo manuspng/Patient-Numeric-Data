@@ -1301,7 +1301,7 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
           }`}
         >
           <Users className={`w-4 h-4 ${activeTab === "users" ? ct.accentText : "text-slate-400"}`} />
-          Registered Users ({usersList.length})
+          Registered Users ({usersList.filter(u => u.role !== UserRole.SUPER_ADMIN).length})
         </button>
 
         <button

@@ -98,15 +98,12 @@ const INITIAL_MOCK_DB = {
       contactPhone: "9455959592",
       isActive: true,
       incharge: "Dr Manvinder Pal Singh",
-      block: "Khatima",
+      block: "खटीमा",
       district: "उधम सिंह नगर",
       stream: "Ayurved"
     }
   ],
-  hospitalDropdownOptions: [
-    { id: "hosp-unregistered-1", name: "राजकीय आयुर्वेदिक चिकित्सालय - बन्नाखेड़ा", code: "SAD-BNK-05", type: "SAD", location: "बन्नाखेड़ा", address: "Bannakhera, Uttarakhand", isActive: true, block: "बाजपुर", district: "उधम सिंह नगर", stream: "Ayurved" },
-    { id: "hosp-unregistered-2", name: "राजकीय आयुर्वेदिक चिकित्सालय - गदरपुर", code: "SAD-GDP-06", type: "SAD", location: "गदरपुर", address: "Gadarpur, Uttarakhand", isActive: true, block: "गदरपुर", district: "उधम सिंह नगर", stream: "Ayurved" }
-  ],
+  hospitalDropdownOptions: [] as any[],
   users: [] as any[],
   dailyReports: [] as any[],
   auditLogs: [
@@ -616,7 +613,7 @@ const customFetch = async function (input: any, init?: any) {
         const hospitals = db.hospitals || [];
 
         const locsFromHosp = hospitals.map((h: any) => h.location).filter(Boolean);
-        const blocksFromHosp = hospitals.map((h: any) => h.block).filter(Boolean);
+        const blocksFromHosp = hospitals.map((h: any) => h.block === "Khatima" ? "खटीमा" : h.block).filter(Boolean);
         const distsFromHosp = hospitals.map((h: any) => h.district).filter(Boolean);
         const typesFromHosp = hospitals.map((h: any) => h.type).filter(Boolean);
         const catsFromHosp = hospitals.map((h: any) => h.category).filter(Boolean);
@@ -625,7 +622,12 @@ const customFetch = async function (input: any, init?: any) {
 
         const mergeUnique = (customList: string[] = [], dynamicList: string[] = []) => {
           const combined = [...(customList || []), ...(dynamicList || [])];
-          return Array.from(new Set(combined.map(x => String(x).trim()).filter(Boolean)));
+          const normalized = combined.map(x => {
+            const trimmed = String(x).trim();
+            if (trimmed.toLowerCase() === "khatima") return "खटीमा";
+            return trimmed;
+          }).filter(Boolean);
+          return Array.from(new Set(normalized));
         };
 
         responseData = {
