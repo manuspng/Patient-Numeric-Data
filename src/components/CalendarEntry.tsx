@@ -598,10 +598,11 @@ export default function CalendarEntry({
 
   // Sync disease logs modifications with matrix totals
   useEffect(() => {
-    const sumNewMale = diseaseLogs.reduce((acc, curr) => acc + Number(curr.opd_male_new || 0), 0);
-    const sumNewFemale = diseaseLogs.reduce((acc, curr) => acc + Number(curr.opd_female_new || 0), 0);
-    const sumOldMale = diseaseLogs.reduce((acc, curr) => acc + Number(curr.opd_male_old || 0), 0);
-    const sumOldFemale = diseaseLogs.reduce((acc, curr) => acc + Number(curr.opd_female_old || 0), 0);
+    const validLogs = diseaseLogs.filter(curr => curr.diseaseId !== "dis-39" && curr.diseaseName.trim() !== "योग");
+    const sumNewMale = validLogs.reduce((acc, curr) => acc + Number(curr.opd_male_new || 0), 0);
+    const sumNewFemale = validLogs.reduce((acc, curr) => acc + Number(curr.opd_female_new || 0), 0);
+    const sumOldMale = validLogs.reduce((acc, curr) => acc + Number(curr.opd_male_old || 0), 0);
+    const sumOldFemale = validLogs.reduce((acc, curr) => acc + Number(curr.opd_female_old || 0), 0);
 
     setMatrix(prev => {
       return {
@@ -1019,8 +1020,76 @@ export default function CalendarEntry({
     });
   }, [lab]);
 
+  const syncDiseaseLogsWithGenderMatrix = (
+    targetMaleNew: number,
+    targetMaleOld: number,
+    logs: DiseaseOPDLog[]
+  ): DiseaseOPDLog[] => {
+    const nonTotalLogs = logs.filter(d => d.diseaseId !== "dis-39" && d.diseaseName.trim() !== "योग");
+    const totalNew = nonTotalLogs.reduce((acc, curr) => acc + (Number(curr.opd_male_new || 0) + Number(curr.opd_female_new || 0)), 0);
+    const totalOld = nonTotalLogs.reduce((acc, curr) => acc + (Number(curr.opd_male_old || 0) + Number(curr.opd_female_old || 0)), 0);
+
+    const safeMaleNew = Math.min(Math.max(0, targetMaleNew), totalNew);
+    const safeMaleOld = Math.min(Math.max(0, targetMaleOld), totalOld);
+    const safeFemaleNew = Math.max(0, totalNew - safeMaleNew);
+    const safeFemaleOld = Math.max(0, totalOld - safeMaleOld);
+
+    const ratioMaleNew = totalNew > 0 ? safeMaleNew / totalNew : 0;
+    const ratioMaleOld = totalOld > 0 ? safeMaleOld / totalOld : 0;
+
+    let accumMaleNew = 0;
+    let accumMaleOld = 0;
+
+    return logs.map(log => {
+      if (log.diseaseId === "dis-39" || log.diseaseName.trim() === "योग") {
+        return {
+          ...log,
+          opd_male_new: safeMaleNew,
+          opd_female_new: safeFemaleNew,
+          opd_male_old: safeMaleOld,
+          opd_female_old: safeFemaleOld,
+        };
+      }
+
+      const dTotalNew = Number(log.opd_male_new || 0) + Number(log.opd_female_new || 0);
+      const dTotalOld = Number(log.opd_male_old || 0) + Number(log.opd_female_old || 0);
+
+      let dMaleNew = Math.round(dTotalNew * ratioMaleNew);
+      let dMaleOld = Math.round(dTotalOld * ratioMaleOld);
+
+      if (accumMaleNew + dMaleNew > safeMaleNew) {
+        dMaleNew = Math.max(0, safeMaleNew - accumMaleNew);
+      }
+      if (accumMaleOld + dMaleOld > safeMaleOld) {
+        dMaleOld = Math.max(0, safeMaleOld - accumMaleOld);
+      }
+
+      accumMaleNew += dMaleNew;
+      accumMaleOld += dMaleOld;
+
+      return {
+        ...log,
+        opd_male_new: dMaleNew,
+        opd_female_new: Math.max(0, dTotalNew - dMaleNew),
+        opd_male_old: dMaleOld,
+        opd_female_old: Math.max(0, dTotalOld - dMaleOld),
+      };
+    });
+  };
+
   const handleMatrixChange = (key: keyof PatientMatrixLog, val: number) => {
-    setMatrix(prev => ({ ...prev, [key]: val }));
+    const sanitizedVal = Math.max(0, val);
+
+    if (key === "opd_male_new" || key === "opd_male_old") {
+      const targetMaleNew = key === "opd_male_new" ? sanitizedVal : (matrix.opd_male_new || 0);
+      const targetMaleOld = key === "opd_male_old" ? sanitizedVal : (matrix.opd_male_old || 0);
+
+      const updatedLogs = syncDiseaseLogsWithGenderMatrix(targetMaleNew, targetMaleOld, diseaseLogs);
+      setDiseaseLogs(updatedLogs);
+      return;
+    }
+
+    setMatrix(prev => ({ ...prev, [key]: sanitizedVal }));
   };
 
   const handleLabChange = (key: keyof InvestigationsLabLog, val: number) => {
@@ -1066,20 +1135,36 @@ export default function CalendarEntry({
     e.preventDefault();
     if (isLocked) return;
 
+    // Ensure synchronized gender matrix payload
+    const finalMaleNew = Math.min(matrix.opd_male_new || 0, totalNewOPD);
+    const finalMaleOld = Math.min(matrix.opd_male_old || 0, totalOldOPD);
+    const finalFemaleNew = Math.max(0, totalNewOPD - finalMaleNew);
+    const finalFemaleOld = Math.max(0, totalOldOPD - finalMaleOld);
+
+    const synchronizedMatrix: PatientMatrixLog = {
+      ...matrix,
+      opd_male_new: finalMaleNew,
+      opd_female_new: finalFemaleNew,
+      opd_male_old: finalMaleOld,
+      opd_female_old: finalFemaleOld,
+    };
+
+    const synchronizedLogs = syncDiseaseLogsWithGenderMatrix(finalMaleNew, finalMaleOld, diseaseLogs);
+
     const payloadReport: DailyReport = {
       id: report?.id || `rep-${hospitalId}-${selectedDate}`,
       hospitalId,
       recordDate: selectedDate,
       submittedAt: new Date().toISOString(),
       submittedBy: user.email,
-      patientMatrix: matrix,
+      patientMatrix: synchronizedMatrix,
       investigationsLab: lab,
       inventory,
       camps,
       isLocked: false,
       anomalyConfirmed: false,
       anomalyFlags: [],
-      diseaseLogs: diseaseLogs,
+      diseaseLogs: synchronizedLogs,
       customFieldsData: customFieldsData
     } as any;
 
