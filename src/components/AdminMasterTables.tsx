@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { createFirebaseUser } from "../firebase";
+import { createFirebaseUser, db as firestoreDb } from "../firebase";
+import { doc, deleteDoc } from "firebase/firestore";
 import { getComponentTheme } from "../utils/theme";
 import ReportDesigner from "./ReportDesigner";
 import { 
@@ -918,9 +919,12 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
 
   const handleDeleteHospital = async () => {
     if (selectedHospId === "new") return;
+    const targetHospId = selectedHospId;
+    const targetHospName = hospName || "this hospital";
+
     triggerConfirm(
       "Confirm Delete Hospital",
-      `Are you absolutely sure you want to delete "${hospName}"? This action is permanent and will remove all associated user and record configurations.`,
+      `Are you absolutely sure you want to delete "${targetHospName}"? This action is permanent and will remove all associated user and record configurations.`,
       async () => {
         try {
           setIsDeletingHosp(true);
@@ -929,27 +933,33 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               adminEmail: user.email,
-              hospitalId: selectedHospId
+              hospitalId: targetHospId
             })
           });
 
           const data = await res.json();
           if (data.success) {
+            // Delete from Cloud Firestore as well
+            try {
+              await deleteDoc(doc(firestoreDb, "hospitals", targetHospId));
+            } catch (fsErr) {
+              console.warn("Could not delete hospital from Cloud Firestore:", fsErr);
+            }
+
             onSuccessToast({
               title: "🗑️ Hospital Deleted",
-              content: data.message
+              content: data.message || `Hospital "${targetHospName}" deleted successfully.`
             });
             
-            // Refresh hospital list
-            const refreshedListResponse = await fetch("/api/hospitals");
-            const refreshedList = await refreshedListResponse.json();
-            setHospitals(refreshedList);
+            // Remove locally immediately
+            const updatedList = hospitals.filter(h => h.id !== targetHospId);
+            setHospitals(updatedList);
             
             // Trigger real-time sync across the app
             window.dispatchEvent(new CustomEvent("hospitals-updated"));
             
             // Reset to new hospital form
-            selectHospital("new", refreshedList);
+            selectHospital("new", updatedList);
           } else {
             alert(data.message || "Failed to delete hospital.");
           }
@@ -1831,11 +1841,11 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
                     type="text"
                     required
                     readOnly
-                    placeholder="Auto-generated from Category + Location"
+                    placeholder="Auto-generated from Type + Location"
                     value={hospName}
                     className="w-full bg-slate-100/80 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-600 font-bold outline-none cursor-not-allowed shadow-inner transition-all"
                   />
-                  <span className="text-[9px] text-slate-400 mt-0.5 block">Automatically derived as: [Hospital Category] - [Location]</span>
+                  <span className="text-[9px] text-slate-400 mt-0.5 block">Automatically derived as: [Hospital Type] - [Location]</span>
                 </div>
 
                 <div>

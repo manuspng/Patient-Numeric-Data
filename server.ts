@@ -2212,8 +2212,8 @@ app.post("/api/admin/hospitals/save", (req, res) => {
     return res.status(400).json({ success: false, message: "Hospital In-charge name is mandatory to complete hospital profile registration." });
   }
 
-  // Force hospital name to represent "facility category + location"
-  const activeSelection = (hospital.category || "राजकीय आयुर्वेदिक चिकित्सालय").trim();
+  // Force hospital name to represent "facility type + location"
+  const activeSelection = (hospital.type || "राजकीय आयुर्वेदिक चिकित्सालय").trim();
   let computedName = activeSelection;
   if (activeSelection && hospital.location) {
     const loc = hospital.location.trim();

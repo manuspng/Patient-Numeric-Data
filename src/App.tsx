@@ -222,7 +222,7 @@ const INITIAL_MOCK_DB = {
 
 let memoryDBFallback: any = null;
 
-const MOCK_DB_VERSION = "v7-full-google-sheets-master-sync";
+const MOCK_DB_VERSION = "v8-clean-single-facility-standard";
 
 const getLocalMockDB = () => {
   // 1. If we have an in-memory state from this session, always use it
@@ -737,9 +737,9 @@ const customFetch = async function (input: any, init?: any) {
       else if (pathname === "/api/admin/hospitals/save") {
         const { hospital: h } = body || {};
         if (h) {
-          const cat = (h.category || h.type || "राजकीय आयुर्वेदिक चिकित्सालय").trim();
+          const type = (h.type || "राजकीय आयुर्वेदिक चिकित्सालय").trim();
           const loc = (h.location || "").trim();
-          const computedName = loc ? `${cat} - ${loc}` : cat;
+          const computedName = loc ? `${type} - ${loc}` : type;
           h.name = computedName;
 
           let existing = db.hospitals.find((item: any) => item.id === h.id);
