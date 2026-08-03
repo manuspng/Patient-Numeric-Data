@@ -436,9 +436,15 @@ export default function CalendarEntry({
   const opdLevyRate = Number(customFieldsData["opd_levy_rate"] !== undefined ? customFieldsData["opd_levy_rate"] : storedRates.opdRate);
   const ipdLevyRate = Number(customFieldsData["ipd_levy_rate"] !== undefined ? customFieldsData["ipd_levy_rate"] : storedRates.ipdRate);
 
-  // Dynamic levy fragments & totals calculated from diseaseLogs
-  const totalNewOPD = diseaseLogs.reduce((acc, curr) => acc + Number(curr.opd_male_new || 0) + Number(curr.opd_female_new || 0), 0);
-  const totalOldOPD = diseaseLogs.reduce((acc, curr) => acc + Number(curr.opd_male_old || 0) + Number(curr.opd_female_old || 0), 0);
+  // Dynamic levy fragments & totals calculated from diseaseLogs (excluding dis-39 / योग to prevent double-counting)
+  const totalNewOPD = diseaseLogs
+    .filter(curr => curr.diseaseId !== "dis-39" && curr.diseaseName.trim() !== "योग")
+    .reduce((acc, curr) => acc + Number(curr.opd_male_new || 0) + Number(curr.opd_female_new || 0), 0);
+
+  const totalOldOPD = diseaseLogs
+    .filter(curr => curr.diseaseId !== "dis-39" && curr.diseaseName.trim() !== "योग")
+    .reduce((acc, curr) => acc + Number(curr.opd_male_old || 0) + Number(curr.opd_female_old || 0), 0);
+
   const grandTotalOPD = totalNewOPD + totalOldOPD;
 
   const opdLevy = totalNewOPD * opdLevyRate;
@@ -759,6 +765,9 @@ export default function CalendarEntry({
     field: "new" | "old", 
     val: number
   ) => {
+    // Disease #39 ("योग") is the read-only sum total of all preceding diseases. Manual edits are ignored.
+    if (diseaseId === "dis-39" || diseaseName.trim() === "योग") return;
+
     const sanitizedVal = Math.max(0, val);
 
     setDiseaseLogs(prevLogs => {
@@ -1590,33 +1599,51 @@ export default function CalendarEntry({
                           return true;
                         })
                         .map((disease, idx) => {
+                          const isTotalRow = disease.id === "dis-39" || disease.name.trim() === "योग";
                           const existingLog = diseaseLogs.find(l => l.diseaseId === disease.id);
-                          const newVal = existingLog ? (existingLog.opd_male_new + existingLog.opd_female_new) : 0;
-                          const oldVal = existingLog ? (existingLog.opd_male_old + existingLog.opd_female_old) : 0;
-                          const totalVal = newVal + oldVal;
+                          
+                          const newVal = isTotalRow ? totalNewOPD : (existingLog ? (existingLog.opd_male_new + existingLog.opd_female_new) : 0);
+                          const oldVal = isTotalRow ? totalOldOPD : (existingLog ? (existingLog.opd_male_old + existingLog.opd_female_old) : 0);
+                          const totalVal = isTotalRow ? grandTotalOPD : (newVal + oldVal);
 
                           return (
                             <tr 
                               key={disease.id}
                               className={`transition-colors ${
-                                totalVal > 0 
-                                  ? "bg-emerald-50/30 hover:bg-emerald-50/60" 
-                                  : "bg-white hover:bg-slate-50/80"
+                                isTotalRow
+                                  ? "bg-amber-100/80 border-t-2 border-amber-300 font-extrabold text-amber-950 shadow-inner hover:bg-amber-100"
+                                  : totalVal > 0 
+                                    ? "bg-emerald-50/30 hover:bg-emerald-50/60" 
+                                    : "bg-white hover:bg-slate-50/80"
                               }`}
                             >
-                              <td className="px-3 py-2 text-center text-slate-400 font-mono text-[11px]">{idx + 1}</td>
-                              <td className="px-3 py-2 font-semibold text-slate-800">{disease.name}</td>
+                              <td className="px-3 py-2 text-center text-slate-400 font-mono text-[11px]">
+                                {isTotalRow ? "39" : idx + 1}
+                              </td>
+                              <td className="px-3 py-2 font-semibold text-slate-800 flex items-center justify-between">
+                                <span>{disease.name}</span>
+                                {isTotalRow && (
+                                  <span className="text-[9px] font-black bg-amber-200 text-amber-950 border border-amber-350 px-2 py-0.5 rounded-full uppercase tracking-wider shadow-3xs">
+                                    Sum Total (योग)
+                                  </span>
+                                )}
+                              </td>
                               
                               {/* New Patients Input */}
                               <td className="px-3 py-1.5 text-center">
                                 <input
                                   type="number"
-                                  disabled={isLocked}
+                                  disabled={isLocked || isTotalRow}
+                                  readOnly={isTotalRow}
                                   min="0"
-                                  value={newVal || ""}
+                                  value={isTotalRow ? totalNewOPD : (newVal || "")}
                                   placeholder="0"
-                                  onChange={(e) => handleBulkCellChange(disease.id, disease.name, "new", Number(e.target.value))}
-                                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-center font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-all"
+                                  onChange={(e) => !isTotalRow && handleBulkCellChange(disease.id, disease.name, "new", Number(e.target.value))}
+                                  className={`w-full border rounded-lg px-2.5 py-1 text-center font-bold outline-none transition-all ${
+                                    isTotalRow
+                                      ? "bg-amber-50/90 border-amber-300 text-amber-950 font-black cursor-not-allowed shadow-inner font-mono text-xs"
+                                      : "bg-white border-slate-200 text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                                  }`}
                                 />
                               </td>
 
@@ -1624,12 +1651,17 @@ export default function CalendarEntry({
                               <td className="px-3 py-1.5 text-center">
                                 <input
                                   type="number"
-                                  disabled={isLocked}
+                                  disabled={isLocked || isTotalRow}
+                                  readOnly={isTotalRow}
                                   min="0"
-                                  value={oldVal || ""}
+                                  value={isTotalRow ? totalOldOPD : (oldVal || "")}
                                   placeholder="0"
-                                  onChange={(e) => handleBulkCellChange(disease.id, disease.name, "old", Number(e.target.value))}
-                                  className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-center font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-all"
+                                  onChange={(e) => !isTotalRow && handleBulkCellChange(disease.id, disease.name, "old", Number(e.target.value))}
+                                  className={`w-full border rounded-lg px-2.5 py-1 text-center font-bold outline-none transition-all ${
+                                    isTotalRow
+                                      ? "bg-amber-50/90 border-amber-300 text-amber-950 font-black cursor-not-allowed shadow-inner font-mono text-xs"
+                                      : "bg-white border-slate-200 text-slate-800 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                                  }`}
                                 />
                               </td>
 
@@ -1640,7 +1672,11 @@ export default function CalendarEntry({
                                   readOnly={true}
                                   disabled={true}
                                   value={totalVal}
-                                  className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 text-center font-extrabold text-amber-900 cursor-not-allowed shadow-inner"
+                                  className={`w-full border rounded-lg px-2.5 py-1 text-center font-extrabold cursor-not-allowed shadow-inner ${
+                                    isTotalRow
+                                      ? "bg-amber-200/90 border-amber-400 text-amber-950 font-mono text-xs"
+                                      : "bg-slate-100 border-slate-200 text-amber-900"
+                                  }`}
                                 />
                               </td>
                             </tr>
