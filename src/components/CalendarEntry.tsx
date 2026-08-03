@@ -1513,25 +1513,55 @@ export default function CalendarEntry({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <input
                       type="text"
                       placeholder="🔍 Search disease by name..."
                       value={diseaseSearchQuery}
                       onChange={(e) => setDiseaseSearchQuery(e.target.value)}
-                      className="bg-white border border-slate-200 rounded-lg px-3 py-1 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500/20 w-48 md:w-56"
+                      className="bg-white border border-slate-200 rounded-lg px-3 py-1 text-xs text-slate-800 outline-none focus:ring-2 focus:ring-emerald-500/20 w-44 md:w-52"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowOnlyEntered(!showOnlyEntered)}
-                      className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all ${
-                        showOnlyEntered
-                          ? "bg-emerald-50 text-emerald-800 border-emerald-300 shadow-3xs"
-                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                      }`}
-                    >
-                      {showOnlyEntered ? "Entered Only (>0)" : "Show All"}
-                    </button>
+
+                    <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowOnlyEntered(false);
+                          setDiseaseSearchQuery("");
+                        }}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all ${
+                          !showOnlyEntered && !diseaseSearchQuery
+                            ? "bg-white text-slate-900 shadow-2xs border border-slate-200/80"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        Show All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowOnlyEntered(true)}
+                        className={`px-2.5 py-1 text-xs font-bold rounded-md transition-all ${
+                          showOnlyEntered
+                            ? "bg-emerald-600 text-white shadow-2xs"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        Entered Only ({diseaseLogs.length})
+                      </button>
+                    </div>
+
+                    {(diseaseSearchQuery !== "" || showOnlyEntered) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDiseaseSearchQuery("");
+                          setShowOnlyEntered(false);
+                        }}
+                        className="text-[11px] font-bold text-rose-600 hover:text-rose-700 underline px-1 cursor-pointer"
+                      >
+                        Reset Filter
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -1550,11 +1580,11 @@ export default function CalendarEntry({
                     <tbody className="divide-y divide-slate-100 text-xs font-medium">
                       {masterDiseases
                         .filter(d => {
-                          const matchesSearch = d.name.toLowerCase().includes(diseaseSearchQuery.toLowerCase());
+                          const matchesSearch = diseaseSearchQuery.trim() === "" || d.name.toLowerCase().includes(diseaseSearchQuery.toLowerCase());
                           if (!matchesSearch) return false;
                           if (showOnlyEntered) {
                             const log = diseaseLogs.find(l => l.diseaseId === d.id);
-                            const total = log ? (log.opd_male_new + log.opd_female_new + log.opd_male_old + log.opd_female_old) : 0;
+                            const total = log ? ((log.opd_male_new || 0) + (log.opd_female_new || 0) + (log.opd_male_old || 0) + (log.opd_female_old || 0)) : 0;
                             return total > 0;
                           }
                           return true;
