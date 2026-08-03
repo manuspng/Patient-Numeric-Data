@@ -1002,16 +1002,18 @@ export default function AdminMasterTables({ user, onSuccessToast, onProfileUpdat
     }
   }, [masters]);
 
-  // Keep hospital name, code, and email synced
+  // Keep hospital name, code, and email synced strictly from Facility Type (hospType) + Location (hospLocation)
   useEffect(() => {
     let computedName = "";
-    const activeSelection = hospCategory ? hospCategory.trim() : (hospType ? hospType.trim() : "");
-    if (activeSelection && hospLocation) {
-      computedName = `${activeSelection} - ${hospLocation.trim()}`;
-    } else if (activeSelection) {
-      computedName = activeSelection;
-    } else if (hospLocation) {
-      computedName = hospLocation.trim();
+    const activeType = hospType ? hospType.trim() : "";
+    const loc = hospLocation ? hospLocation.trim() : "";
+
+    if (activeType && loc) {
+      computedName = `${activeType} - ${loc}`;
+    } else if (activeType) {
+      computedName = activeType;
+    } else if (loc) {
+      computedName = loc;
     }
     setHospName(computedName);
 

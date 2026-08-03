@@ -233,7 +233,7 @@ const INITIAL_MOCK_DB = {
 
 let memoryDBFallback: any = null;
 
-const MOCK_DB_VERSION = "v9-clean-single-facility-and-user";
+const MOCK_DB_VERSION = "v10-clean-facility-name-type-compilation";
 
 const getLocalMockDB = () => {
   // 1. If we have an in-memory state from this session, always use it
@@ -370,14 +370,14 @@ const parseGoogleSheetCsv = (csvText: string) => {
     if (typeVal) extractedTypes.push(typeVal);
     if (sysVal) extractedStreams.push(sysVal);
 
-    if (locVal || catVal) {
-      const categoryStr = catVal || typeVal || "SAD";
-      let compName = categoryStr;
-      if (categoryStr && locVal) {
-        if (categoryStr.toLowerCase().includes(locVal.toLowerCase())) {
-          compName = categoryStr;
+    if (locVal || typeVal || catVal) {
+      const facilityTypeStr = typeVal || catVal || "राजकीय आयुर्वेदिक चिकित्सालय";
+      let compName = facilityTypeStr;
+      if (facilityTypeStr && locVal) {
+        if (facilityTypeStr.toLowerCase().includes(locVal.toLowerCase())) {
+          compName = facilityTypeStr;
         } else {
-          compName = `${categoryStr} - ${locVal}`;
+          compName = `${facilityTypeStr} - ${locVal}`;
         }
       } else if (locVal) {
         compName = locVal;
@@ -387,8 +387,8 @@ const parseGoogleSheetCsv = (csvText: string) => {
         id: `hosp-${idx + 1}-${Math.random().toString(36).substring(2, 7)}`,
         name: compName,
         code: typeVal ? `${typeVal}-${(idx + 1).toString().padStart(3, '0')}` : `AYUSH-${100 + idx}`,
-        type: typeVal || categoryStr || "SAD",
-        category: categoryStr,
+        type: typeVal || catVal || "राजकीय आयुर्वेदिक चिकित्सालय",
+        category: catVal || "SAD",
         address: `${locVal}${blockVal ? ', ' + blockVal : ''}`,
         contactEmail: emailVal,
         contactPhone: "",
