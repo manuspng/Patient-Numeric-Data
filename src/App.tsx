@@ -1159,6 +1159,9 @@ const customFetch = async function (input: any, init?: any) {
           camp_ncd_screenings: hospitalAggregates.reduce((s, h) => s + h.camp_ncd_screenings, 0),
           camp_ayurvidya_sessions: hospitalAggregates.reduce((s, h) => s + h.camp_ayurvidya_sessions, 0),
           camps: hospitalAggregates.reduce((acc, h) => acc.concat(h.camps || []), [] as any[]),
+          levy_charges: hospitalAggregates.reduce((s, h) => s + (Number(h.levy_charges) || 0), 0),
+          aadhaar_seeded: hospitalAggregates.reduce((s, h) => s + (Number(h.aadhaar_seeded_count) || Number(h.aadhaar_seeded) || 0), 0),
+          mobile_seeded: hospitalAggregates.reduce((s, h) => s + (Number(h.mobile_seeded_count) || Number(h.mobile_seeded) || 0), 0),
           diseaseTotals: Object.values(districtDiseaseTotals)
         };
 
@@ -1236,6 +1239,9 @@ const customFetch = async function (input: any, init?: any) {
               camp_ncd_screenings: responseHospitals.reduce((s: number, h: any) => s + h.camp_ncd_screenings, 0),
               camp_ayurvidya_sessions: responseHospitals.reduce((s: number, h: any) => s + h.camp_ayurvidya_sessions, 0),
               camps: responseHospitals.reduce((acc: any[], h: any) => acc.concat(h.camps || []), []),
+              levy_charges: responseHospitals.reduce((s: number, h: any) => s + (Number(h.levy_charges) || 0), 0),
+              aadhaar_seeded: responseHospitals.reduce((s: number, h: any) => s + (Number(h.aadhaar_seeded_count) || Number(h.aadhaar_seeded) || 0), 0),
+              mobile_seeded: responseHospitals.reduce((s: number, h: any) => s + (Number(h.mobile_seeded_count) || Number(h.mobile_seeded) || 0), 0),
               diseaseTotals: Object.values(catDiseaseTotals)
             } as any);
           }

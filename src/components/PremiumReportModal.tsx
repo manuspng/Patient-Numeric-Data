@@ -545,7 +545,7 @@ export default function PremiumReportModal({
 
     switch (reportType) {
       case "proforma1": {
-        const standardDiseasesList = hospitalData.diseaseTotals || [];
+        const standardDiseasesList = (hospitalData.diseaseTotals || []).filter((d: any) => d.nameHindi !== "योग" && d.nameEnglish !== "Yoga / Yoga Beneficiaries" && d.sNo !== 39);
         
         const opdMaleNewVal = hospitalData.opd_male_new || 0;
         const opdMaleOldVal = hospitalData.opd_male_old || 0;
@@ -617,7 +617,7 @@ export default function PremiumReportModal({
                     <td className="p-1 font-bold text-slate-800 bg-slate-50 text-center h-[21.5px]" style={{ fontSize: "11.5px" }}>Date</td>
                     <td className="p-1 text-slate-900 font-semibold font-mono" style={{ fontSize: "10.5px" }}>{dispatchDate}</td>
                     <td className="p-1 font-bold text-slate-800 bg-slate-50 text-center" style={{ fontSize: "11.5px" }}>Challan Amount</td>
-                    <td className="p-1 text-emerald-950 font-extrabold font-mono text-left" style={{ fontSize: "12.5px" }}>₹ {customChallanAmount}</td>
+                    <td className="p-1 text-emerald-950 font-extrabold font-mono text-left" style={{ fontSize: "12.5px" }}>₹ {user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.DAUO || selectedHospitalId === "district-total" ? "0" : customChallanAmount}</td>
                     <td className="p-1" colSpan={6}></td>
                   </tr>
                 </tbody>
@@ -707,7 +707,7 @@ export default function PremiumReportModal({
                       <td className="p-1 bg-slate-100 text-slate-950 font-bold">{panchkarmaFemaleTotalVal}</td>
                       
                       {/* Grand Total Levy */}
-                      <td className="p-1 font-sans font-bold text-slate-950">₹{customChallanAmount}</td>
+                      <td className="p-1 font-sans font-bold text-slate-950">₹{levy_charges}</td>
                       {/* Grand Total Patients */}
                       <td className="p-1 bg-emerald-50 font-extrabold text-emerald-950 text-[11px]">{grandOPDTotal}</td>
                       {/* Adhar Seeded */}
@@ -899,7 +899,7 @@ export default function PremiumReportModal({
       }
 
       case "proforma2": {
-        const standardDiseasesList = hospitalData.diseaseTotals || [];
+        const standardDiseasesList = (hospitalData.diseaseTotals || []).filter((d: any) => d.nameHindi !== "योग" && d.nameEnglish !== "Yoga / Yoga Beneficiaries" && d.sNo !== 39);
         
         const opdMaleNewVal = hospitalData.opd_male_new || 0;
         const opdMaleOldVal = hospitalData.opd_male_old || 0;
@@ -981,7 +981,7 @@ export default function PremiumReportModal({
                     <td className="p-1 font-bold text-slate-800 bg-sky-50 text-center h-[21.5px]" style={{ fontSize: "11.5px" }}>Date</td>
                     <td className="p-1 text-slate-900 font-semibold font-mono text-center" style={{ fontSize: "10.5px" }}>{dispatchDate}</td>
                     <td className="p-1 font-bold text-slate-800 bg-sky-50 text-center" style={{ fontSize: "11.5px" }}>Challan Amount</td>
-                    <td className="p-1 text-emerald-950 font-extrabold font-mono text-left" style={{ fontSize: "12.5px" }}>₹ {customChallanAmount}</td>
+                    <td className="p-1 text-emerald-950 font-extrabold font-mono text-left" style={{ fontSize: "12.5px" }}>₹ {user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.DAUO || selectedHospitalId === "district-total" ? "0" : customChallanAmount}</td>
                     <td className="p-1" colSpan={6}></td>
                   </tr>
                 </tbody>
@@ -1071,7 +1071,7 @@ export default function PremiumReportModal({
                       <td className="p-1 bg-sky-100 text-slate-950 font-bold">{panchkarmaFemaleTotalVal}</td>
                       
                       {/* Grand Total Levy */}
-                      <td className="p-1 font-sans font-bold text-slate-950 text-center">₹{customChallanAmount}</td>
+                      <td className="p-1 font-sans font-bold text-slate-950 text-center">₹{levy_charges}</td>
                       {/* Grand Total Patients */}
                       <td className="p-1 bg-emerald-50 font-extrabold text-emerald-950 text-[11px]">{grandOPDTotal}</td>
                       {/* Adhar Seeded */}
